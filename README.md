@@ -13,8 +13,13 @@ A PHP [Yii framework](http://www.yiiframework.com/ "Yii Framework Home") extensi
 
 1. Create a new extension directory for your Yii application: `~/protected/extensions/minify`
 2. Download both [src/MinifyClientScript.php](https://github.com/yanli0303/Yii-MinifyClientScript/blob/master/src/MinifyClientScript.php) and [LICENSE.md](https://github.com/yanli0303/Yii-MinifyClientScript/blob/master/LICENSE.md), put them into `~/protected/extensions/minify`
-3. Update your Yii application configuration file(usually named `/protected/config/main.php`) and replace the Yii [CClientScript](http://www.yiiframework.com/doc/api/1.1/CClientScript) with `MinifyClientScript`:
-	```PHP	
+3. Update your Yii application configuration file(usually named `/protected/config/main.php`) and replace the Yii [CClientScript](http://www.yiiframework.com/doc/api/1.1/CClientScript) with `MinifyClientScript`
+4. Before deploying, minify the individual JavaScript and CSS files:
+	- You can do it with [Ant-MinifyJsCss](https://github.com/yanli0303/Ant-MinifyJsCss)
+5. Pack your application sources and deploy 
+
+### Sample Yii application configuration file ###
+```PHP	
 	return array(
 	    'basePath' => __DIR__ . '/..',
 	    'name' => 'Your App Name',
@@ -48,10 +53,8 @@ A PHP [Yii framework](http://www.yiiframework.com/ "Yii Framework Home") extensi
 	    )
 	);
 	```
-	**Note**: set `"minify" => !YII_DEBUG` to disable minifying while developing
-4. Before deploying, minify the individual JavaScript and CSS files:
-	- You can do it with [Ant-MinifyJsCss](https://github.com/yanli0303/Ant-MinifyJsCss)
-5. Pack your application sources and deploy 
+
+**Note**: set `"minify" => !YII_DEBUG` to disable minifying while developing
 
 ## License ##
 MIT
