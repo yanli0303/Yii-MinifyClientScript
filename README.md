@@ -18,7 +18,7 @@ A PHP [Yii framework](http://www.yiiframework.com/ "Yii Framework Home") extensi
 	- You can do it with [Ant-MinifyJsCss](https://github.com/yanli0303/Ant-MinifyJsCss)
 5. Pack your application sources and deploy 
 
-### Sample Yii application configuration file ###
+Sample Yii application configuration file:
 
 ```PHP	
 return array(

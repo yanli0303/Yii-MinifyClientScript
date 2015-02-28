@@ -1,76 +1,64 @@
 <?php
 
-Yii::import('ext.minify.*');
-
 /**
- * Provide functionalities to minify JS and CSS files that current Yii::app()->request used.
- *
+ * Extends CClientScript and concatenate JS and CSS files that current Yii::app()->request used.
  * @author Yan Li <peterleepersonal@gmail.com>
  */
 class MinifyClientScript extends CClientScript {
     /**
-     * If this is enabled, during minifying all other requests will wait until completed.
-     * If disabled, the unminified files will be delivered for these requests.
-     * This should prevent the thundering herd problem.
-     *
-     * @var bool Whether other requests should pause while minifiying.
-     * Defaults to TRUE.
+     * @var bool Whether to enable minifying.
+     * Defaults to true.
      */
-    public $exclusivelyMinify = TRUE;
+    public $minify = true;
 
     /**
      * @var bool Whether remove the Yii::app()->baseUrl from the beginning of resource urls.
-     * Defaults to TRUE.
+     * Defaults to true.
      */
-    public $trimBaseUrl = TRUE;
+    public $trimBaseUrl = true;
 
     /**
      * @var bool Whether to rewrite "url()" rules of CSS after relocating CSS files.
-     * Defaults to TRUE.
+     * Defaults to true.
      */
-    public $rewriteCssUrl = TRUE;
-
-    /**
-     * @var bool Whether to enable minifying.
-     * Defaults to TRUE.
-     */
-    public $minify = TRUE;
+    public $rewriteCssUrl = true;
 
     /**
      * @var bool If False, fallback to unminified version whenever any error occurred.
      */
-    public $failOnError = FALSE;
+    public $failOnError = false;
 
     /**
      * @var string The filename(without extension) suffix of minified files.
-     * Defaults to '.min' which means a minified file is as in "jQuery.min.js".
+     * Defaults to '.min' which means a minified file is named as in "jquery.min.js".
      */
     public $minFileSuffix = '.min';
 
     /**
      * The working directory for minifying.
-     * @var string Path to the working directory, default is "~/runtime/minify"
+     * @var string Path to the working directory, which is "~/runtime/minify"
      */
-    protected $_workingDirectory = NULL;
+    private $_wd = null;
 
     protected function getWorkingDir() {
-        if (!$this->_workingDirectory) {
+        if (!$this->_wd) {
             $wd = Yii::app()->getRuntimePath() . DIRECTORY_SEPARATOR . 'minify';
 
             // create the directory if not existed
             if (is_dir($wd) || mkdir($wd, 0755, true)) {
-                $this->_workingDirectory = $wd;
+                $this->_wd = $wd;
             } else {
-                $msg = 'Unable to create directory for minifying JavaScript/CSS files: ' . $wd;
-                Yii::log($msg, CLogger::LEVEL_ERROR, 'minify.' . __CLASS__ . '.' . __FUNCTION__ . '.line' . __LINE__);
+                $msg = 'Unable to create directory for concatenating JavaScript/CSS files: ' . $wd;
 
                 if ($this->failOnError) {
                     throw new Exception($msg);
+                } else {
+                    Yii::log($msg, CLogger::LEVEL_ERROR, 'ext.minify.' . __CLASS__ . '.' . __FUNCTION__ . '.line' . __LINE__);
                 }
             }
         }
 
-        return $this->_workingDirectory;
+        return $this->_wd;
     }
 
     protected function isMinified($filename) {
@@ -81,155 +69,283 @@ class MinifyClientScript extends CClientScript {
 
     protected function findMinifiedFile($filename) {
         $lastDotPosition = strrpos($filename, '.');
-        $minFile = FALSE === $lastDotPosition ? $filename . $this->minFileSuffix : substr($filename, 0, $lastDotPosition) . $this->minFileSuffix . substr($filename, $lastDotPosition);
-        return file_exists($minFile) ? $minFile : NULL;
-//        if (!file_exists($minFile)) {
-//            if ($this->failOnError) {
-//                $msg = 'The minified version was not found for: ' . $filename;
-//                Yii::log($msg, CLogger::LEVEL_ERROR, 'minify.' . __CLASS__ . '.' . __FUNCTION__ . '.line' . __LINE__);
-//
-//                throw new Exception($msg);
-//            } else {
-//                $msg = 'The minified version was not found for: ' . $filename . ', use itself instead.';
-//                Yii::log($msg, CLogger::LEVEL_TRACE, 'minify.' . __CLASS__ . '.' . __FUNCTION__ . '.line' . __LINE__);
-//
-//                return $filename;
-//            }
-////        }
-//
-//        return $minFile;
+        $minFile = false === $lastDotPosition ? $filename . $this->minFileSuffix : substr($filename, 0, $lastDotPosition) . $this->minFileSuffix . substr($filename, $lastDotPosition);
+        return file_exists($minFile) ? $minFile : null;
+    }
+
+    protected function findMinifiedFiles($files) {
+        $minifiedFiles = array();
+        foreach ($files as $key => $file) {
+            $minFile = $this->findMinifiedFile($file);
+            if (!$minFile) {
+                if ($this->failOnError) {
+                    throw new Exception('The minified version was not found for: ' . $file);
+                }
+
+                $msg = 'The minified version was not found for: ' . $file . ', use itself instead.';
+                Yii::log($msg, CLogger::LEVEL_INFO, 'ext.minify.' . __CLASS__ . '.' . __FUNCTION__ . '.line' . __LINE__);
+
+                // fallback to unminified version
+                $minFile = $file;
+            }
+
+            $minifiedFiles[$key] = $minFile;
+        }
+
+        return $minifiedFiles;
     }
 
     private function getFileToConcat($file) {
         return $this->isMinified($file) ? $file : $this->findMinifiedFile($file);
     }
 
-    public function doMinifyAndPublish($items, $type, $saveAs) {
-        $saveDir = dirname($saveAs);
-        $minifiedFiles = array();
-        foreach ($items as $url => $file) {
-            $actualFile = $this->getFileToConcat($file);
-            if (!$actualFile) {
-                Yii::log('File not found: ' . $file, CLogger::LEVEL_ERROR, 'minify.' . __CLASS__ . '.' . __FUNCTION__ . '.line' . __LINE__);
-                continue;
+    protected function maxFileModifiedTime($files) {
+        $max = 0;
+        foreach ($files as $file) {
+            $lastModifiedTime = filemtime($file);
+            if (false === $lastModifiedTime) {
+                throw new Exception('Unable to get last modification time of file: ' . $file);
             }
 
-            // rewrite css url()
-            if ($type === 'css' && $this->rewriteCssUrl) {
-                $rewrittenCssFile = MinifyHelper::joinPath($saveDir, MinifyHelper::generateUniqueMinifiedFileName($url, $file, $type));
-                $previouslyRewritten = file_exists($rewrittenCssFile) && filesize($rewrittenCssFile) > 8 && filemtime($file) <= filemtime($rewrittenCssFile);
-                if ($previouslyRewritten) {
-                    $actualFile = $rewrittenCssFile;
-                } else {
-                    $rewriteSuccessful = MinifyHelper::concat(array($actualFile), $rewrittenCssFile, function($cssContent) use (&$url) {
-                                // make url() rules of CSS absolute
-                                return MinifyHelper::cssUrlRewrite($cssContent, $url);
-                            });
-
-                    if ($rewriteSuccessful) {
-                        $actualFile = $rewrittenCssFile;
-                    } else {
-                        Yii::log("Failed to rewrite CSS url() for '{$file}'.", CLogger::LEVEL_WARNING, 'minify.' . __CLASS__ . '.' . __FUNCTION__ . '.line' . __LINE__);
-                    }
-                }
+            if ($lastModifiedTime > $max) {
+                $max = $lastModifiedTime;
             }
-
-            $minifiedFiles[] = $actualFile;
         }
 
-        // file header is 8 bytes, if filesize <= 8, consider it's empty
-        if (!MinifyHelper::concat($minifiedFiles, $saveAs) || !file_exists($saveAs) || filesize($saveAs) <= 8) {
-            return FALSE;
-        }
-
-        Yii::app()->getAssetManager()->publish($saveAs, TRUE);
-        return TRUE;
+        return $max;
     }
 
-    protected function minifyAndPublish($urls, $type, $baseUrl, $basePath) {
-        if (count($urls) === 0) {
-            return NULL;
+    protected function hashFileNames($files) {
+        $oneline = implode(PATH_SEPARATOR, $files);
+        return md5($oneline);
+    }
+
+    /**
+     * Removes the leading / and specified prefix from the url.
+     * @param string $url the url to canonicalize.
+     * @param string $prefix url prefix.
+     * @return string
+     */
+    protected function canonicalizeUrl($url, $prefix) {
+        $prefixLength = strlen($prefix);
+        if ($prefixLength > 0 && 0 === strncasecmp($prefix, $url, $prefixLength)) {
+            $url = substr($url, $prefixLength);
         }
 
-        $items = array();
-        foreach ($urls as $url) {
-            $relativePath = $this->trimBaseUrl ? MinifyHelper::removeUrlPrefix($baseUrl, $url) : $url;
-            $items[$url] = MinifyHelper::joinPath($basePath, $relativePath);
+        return ltrim($url, '/');
+    }
+
+    protected function removeUrlDomain($url) {
+        $protocolIndex = strpos($url, '//');
+        if (false === $protocolIndex) {
+            return $url;
         }
 
-        $groupMaxFileModifiedTime = MinifyHelper::maxFileModifiedTime($items);
-        $groupId = MinifyHelper::hashFileNames($items) . $groupMaxFileModifiedTime;
-        $minFile = MinifyHelper::joinPath($this->getWorkingDir(), $groupId . '.min.' . $type);
+        $urlWithoutProtocol = substr($url, $protocolIndex + 2);
+        $pathIndex = strpos($urlWithoutProtocol, '/');
+        return false === $pathIndex ? $url : substr($urlWithoutProtocol, $pathIndex);
+    }
 
+    /**
+     * Check whether the given URL is relative or not.
+     * Any URL that starts with either of ['http:', 'https:', '//'] is considered as external.
+     * @return boolean If the given URL is relative, returns FALSE; otherwise returns TRUE;
+     */
+    protected function isExternalUrl($url) {
+        return 0 === strncasecmp($url, 'https:', 6) || 0 === strncasecmp($url, 'http:', 5) || 0 === strncasecmp($url, '//', 2);
+    }
+
+    /**
+     * Resolves the '..' and '.' in the URL.
+     * @param string $url The url to process.
+     * @return string
+     */
+    protected function realurl($url) {
+        $normalizedUrl = str_replace('\\', '/', $url);
+        $urlParts = explode('/', $normalizedUrl);
+        $index = 0;
+        while ($index < count($urlParts)) {
+            $part = $urlParts[$index];
+            if ($part === '.') {
+                array_splice($urlParts, $index, 1);
+            } else if ($part === '..' && $index > 0 && $urlParts[$index - 1] !== '..') {
+                array_splice($urlParts, $index - 1, 2);
+                $index -= 1;
+            } else {
+                $index += 1;
+            }
+        }
+
+        return implode('/', $urlParts);
+    }
+
+    /**
+     * Make url() rules of CSS absolute.
+     * @param string $cssFileContent The content of the CSS file.
+     * @param string $cssFileUrl The full URL to the CSS file.
+     * @return string
+     */
+    protected function cssUrlAbsolute($cssFileContent, $cssFileUrl) {
         $me = $this;
-        $successful = EMutexHelper::exec('minify', 3, $this->exclusivelyMinify, function() use (&$minFile, &$groupMaxFileModifiedTime) {
-                    // TODO: move getPublishedPath step outside (following 1 line)
-                    $minFilePublishedPath = Yii::app()->getAssetManager()->getPublishedPath($minFile, TRUE);
-                    return !empty($minFilePublishedPath) && file_exists($minFilePublishedPath) && filemtime($minFilePublishedPath) >= $groupMaxFileModifiedTime;
-                }, function() use(&$me, &$items, &$type, &$minFile) {
-                    return $me->doMinifyAndPublish($items, $type, $minFile);
-                });
+        $newUrlPrefix = $this->removeUrlDomain(dirname($cssFileUrl)) . '/';
 
-        if ($successful) {
-            $minUrl = Yii::app()->getAssetManager()->getPublishedUrl($minFile, TRUE);
-            return $this->trimBaseUrl ? MinifyHelper::removeUrlPrefix($baseUrl, $minUrl) : $minUrl;
-        }
+        // see http://www.w3.org/TR/CSS2/syndata.html#uri
+        return preg_replace_callback('#\burl\(([^)]+)\)#i', function($matches) use (&$newUrlPrefix, &$me) {
+            $url = $matches[1];
+            $isAbsUrl = $me->isExternalUrl($url) || substr($url, 0, 1) === '/';
+            if (!$isAbsUrl) {
+                $url = trim($url, ' ');
+                $firstChar = $url[0];
+                $lastChar = $url[strlen($url) - 1];
+                if ($firstChar === $lastChar && ($firstChar === '\'' || $firstChar === '"')) {
+                    $url = substr($url, 1, -1);
+                }
 
-        return NULL;
+                $url = $me->realurl($newUrlPrefix . $url);
+            }
+
+            return "url({$url})";
+        }, $cssFileContent);
     }
 
-    protected function minifyGroup($urls, $type, $baseUrl, $basePath) {
-        if (!$this->minify) {
-            if (!$this->trimBaseUrl) {
-                return $urls;
-            }
-
-            $trimmedUrls = array();
-            foreach ($urls as $url => $media) {
-                if (MinifyHelper::isExternalUrl($url)) {
-                    $trimmedUrls[$url] = $type === 'css' ? $media : $url;
-                } else {
-                    $url = MinifyHelper::removeUrlPrefix($baseUrl, $url);
-                    $trimmedUrls[$url] = $type === 'css' ? $media : $url;
-                }
-            }
-
-            return $trimmedUrls;
-        }
-
+    protected function filterLocals(&$items) {
         $externs = array();
         $locals = array();
-        foreach ($urls as $url => $media) {
-            if (MinifyHelper::isExternalUrl($url)) {
-                $externs[$url] = $type === 'css' ? $media : $url;
+        foreach ($items as $url => $media) {
+            if ($this->isExternalUrl($url)) {
+                $externs[$url] = $media;
             } else {
                 $locals[] = $url;
             }
         }
 
-        $minUrl = $this->minifyAndPublish($locals, $type, $baseUrl, $basePath);
-        if (empty($minUrl)) {
-            return $urls;
-        }
-
-        // the new css media will be empty.
-        $externs[$minUrl] = $type === 'css' ? '' : $minUrl;
-        return $externs;
+        $items = $externs;
+        return $locals;
     }
 
-    protected function minifyPage() {
-        if (defined('YII_DEBUG') && YII_DEBUG) {
-            $minifyStartTime = microtime(TRUE);
+    protected function trimBaseUrl($items, $isCss) {
+        $baseUrl = Yii::app()->getBaseUrl();
+        $trimmedUrls = array();
+        foreach ($items as $url => $media) {
+            if ($this->isExternalUrl($url)) {
+                $trimmedUrls[$url] = $url;
+            } else {
+                $url = $this->canonicalizeUrl($url, $baseUrl);
+                $trimmedUrls[$url] = $isCss ? $media : $url;
+            }
         }
 
+        return $trimmedUrls;
+    }
+
+    protected function generateBigMinFilePath($files, $extension) {
+        $maxFileModifiedTime = $this->maxFileModifiedTime($files);
+        $id = $this->hashFileNames($files) . $maxFileModifiedTime;
+        return $this->getWorkingDir() . DIRECTORY_SEPARATOR . $id . $this->minFileSuffix . $extension;
+    }
+
+    protected function getFiles($items) {
         $baseUrl = Yii::app()->getBaseUrl();
         $basePath = Yii::getPathOfAlias('webroot');
 
-        // array(
-        //     'css url' => 'media type',
-        //      ...
-        // )
-        $this->cssFiles = $this->minifyGroup($this->cssFiles, 'css', $baseUrl, $basePath);
+        $files = array();
+        foreach ($items as $url) {
+            $relativePath = $this->canonicalizeUrl($url, $baseUrl);
+            $realpath = realpath($basePath . DIRECTORY_SEPARATOR . $relativePath);
+            if (false === $realpath) {
+                throw new Exception('File not found: ' . $url);
+            }
+
+            $files[$url] = $realpath;
+        }
+
+        return $files;
+    }
+
+    /**
+     * Concatenate specified text files into one.
+     * @param array $files List of files to concatenate (full path).
+     * @param string $saveAs The file name(full path) of concatenated file.
+     * @param callable $fnProcessFileContent Callback function which accepts an argument of $fileContent,
+     * And returns the modified $fileContent.
+     * @return bool Returns TRUE on success, otherwise returns FALSE.
+     */
+    protected function concat($files, $saveAs, $fnProcessFileContent = null) {
+        $isFirst = true;
+        foreach ($files as $key => $fileName) {
+            $fileContent = file_get_contents($fileName);
+            if (false === $fileContent) {
+                throw new Exception("Failed to get contents of '{$fileName}'.");
+            }
+
+            if (is_callable($fnProcessFileContent)) {
+                $fileContent = call_user_func($fnProcessFileContent, $fileContent, $key);
+            }
+
+            // overwrites the existed $saveAs file
+            $flags = $isFirst ? LOCK_EX : (FILE_APPEND | LOCK_EX);
+            if (!file_put_contents($saveAs, $fileContent . PHP_EOL, $flags)) {
+                throw new Exception("Failed to append the contents of '{$fileName}' into '{$saveAs}'.");
+            }
+
+            $isFirst = false;
+        }
+    }
+
+    protected function processScriptGroup($groupItems, $isCss) {
+        if (!$this->minify) {
+            return $this->trimBaseUrl ? $this->trimBaseUrl($groupItems, true) : $groupItems;
+        }
+
+        $locals = $this->filterLocals($groupItems);
+        if (empty($locals)) {
+            return $groupItems;
+        }
+
+        $files = $this->getFiles($locals);
+        $bigFile = $this->generateBigMinFilePath($files, $isCss ? '.css' : '.js');
+        $bigFileUrl = file_exists($bigFile) ? Yii::app()->getAssetManager()->getPublishedUrl($bigFile, true) : null;
+
+        if (!$bigFileUrl) {
+            $minFiles = $this->findMinifiedFiles($files);
+            $tmpBigFile = tempnam($this->getWorkingDir(), 'min');
+            if ($isCss && $this->rewriteCssUrl) {
+                $me = $this;
+                $this->concat($minFiles, $tmpBigFile, function($content, $url) use (&$me) {
+                    $me->cssUrlAbsolute($content, $url);
+                });
+            } else {
+                $this->concat($minFiles, $tmpBigFile);
+            }
+
+            // rename is an atomic operation
+            rename($tmpBigFile, $bigFile);
+            $bigFileUrl = Yii::app()->getAssetManager()->publish($bigFile, true);
+        }
+
+        if ($this->trimBaseUrl) {
+            $baseUrl = Yii::app()->getBaseUrl();
+            $bigFileUrl = $this->canonicalizeUrl($bigFileUrl, $baseUrl);
+        }
+
+        // the new css media will be empty.
+        $groupItems[$bigFileUrl] = $isCss ? '' : $bigFileUrl;
+        return $groupItems;
+    }
+
+    protected function processScripts() {
+        // No work to do
+        if (!($this->minify || $this->trimBaseUrl)) {
+            return;
+        }
+
+        // Unable to create working directory, nothing can do
+        if (!$this->getWorkingDir()) {
+            return;
+        }
+
+        // array('css url' => 'media type', ... more ...)
+        $this->cssFiles = $this->processScriptGroup($this->cssFiles, true);
 
         // array(
         //     POS_HEAD => array("key" => "url", ... ),
@@ -237,15 +353,9 @@ class MinifyClientScript extends CClientScript {
         // )
         $newScriptFiles = array();
         foreach ($this->scriptFiles as $jsPosition => $jsFiles) {
-            $newScriptFiles[$jsPosition] = $this->minifyGroup($jsFiles, 'js', $baseUrl, $basePath);
+            $newScriptFiles[$jsPosition] = $this->processScriptGroup($jsFiles, false);
         }
         $this->scriptFiles = $newScriptFiles;
-        if (defined('YII_DEBUG') && YII_DEBUG) {
-            $minifyEndTime = microtime(TRUE);
-            $execution = ($minifyEndTime - $minifyStartTime) * 1000;
-            $pageUrl = Yii::app()->getRequest()->getUrl();
-            Yii::log("Minify took {$execution} ms on {$pageUrl}", CLogger::LEVEL_PROFILE, 'minify.' . __CLASS__ . '.' . __FUNCTION__ . '.line' . __LINE__);
-        }
     }
 
     /**
@@ -256,29 +366,34 @@ class MinifyClientScript extends CClientScript {
      * @param string $output the existing output that needs to be inserted with script tags
      */
     public function render(&$output) {
-        // <editor-fold desc="CClientScript->render">
-        if (!$this->hasScripts)
+        if (!$this->hasScripts) {
             return;
+        }
 
         $this->renderCoreScripts();
 
-        if (!empty($this->scriptMap))
+        if (!empty($this->scriptMap)) {
             $this->remapScripts();
+        }
 
         $this->unifyScripts();
-        // </editor-fold>
 
-        /**
-         * This is the only step that needed
-         */
-        $this->minifyPage();
+        // The following is the only step that needed that we added to CClientScript->render()
+        if (YII_DEBUG) {
+            $minifyStartTime = microtime(true);
+        }
+        $this->processScripts();
+        if (YII_DEBUG) {
+            $minifyEndTime = microtime(true);
+            $execution = ($minifyEndTime - $minifyStartTime) * 1000;
+            $pageUrl = Yii::app()->getRequest()->getUrl();
+            Yii::log("Minify took {$execution} ms on {$pageUrl}", CLogger::LEVEL_PROFILE, 'ext.minify.' . __CLASS__ . '.' . __FUNCTION__ . '.line' . __LINE__);
+        }
 
-        // <editor-fold desc="CClientScript->render">
         $this->renderHead($output);
         if ($this->enableJavaScript) {
             $this->renderBodyBegin($output);
             $this->renderBodyEnd($output);
         }
-        // </editor-fold>
     }
 }
