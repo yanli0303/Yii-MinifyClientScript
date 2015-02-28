@@ -32,7 +32,7 @@ return array(
     ),
     'clientScript' => array(
         'class' => 'ext.minify.MinifyClientScript',
-        'minify' => !YII_DEBUG,
+        'minify' => !YII_DEBUG, // Disable minifying while developing
         // put all js files before end </body> tag
         // note this setting won't affect css files, they will be put in <head>
         'coreScriptPosition' => CClientScript::POS_END,
@@ -54,8 +54,6 @@ return array(
     )
 );
 ```
-
-**Note**: set `"minify" => !YII_DEBUG` to disable minifying while developing
 
 ## License ##
 MIT
