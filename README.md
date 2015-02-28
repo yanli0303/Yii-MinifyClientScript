@@ -4,7 +4,7 @@ A PHP [Yii framework](http://www.yiiframework.com/ "Yii Framework Home") extensi
 ## How does it work? ##
 
 1. Minify each JavaScript and CSS files before deployment (during build stage):
-	- For each JavaScript/CSS file we have, generated a minified version in same directory, and name it with a ".min" suffix;
+	- For each JavaScript/CSS file we have, generated a minified version in same directory, and name it with a **.min** suffix;
 	- e.g. Minified version of `~/src/css/style.css` should be named as `~/src/css/style.min.css`
 2. Concatenate the JavaScript/CSS files required on the page at run-time
 
@@ -25,8 +25,8 @@ return array(
         'application.extensions.*'
     ),
     'clientScript' => array(
-        'class' => 'ext.minify.MinifyClientScript',
-        'minify' => !YII_DEBUG,
+        'class' => '**ext.minify.MinifyClientScript**',
+        'minify' => **!YII_DEBUG**,
         // put all js files before end </body> tag
         // note this setting won't affect css files, they will be put in <head>
         'coreScriptPosition' => CClientScript::POS_END,
@@ -48,10 +48,11 @@ return array(
     )
 );
 ```
-	- **Note**: set `"minify" => !YII_DEBUG` to disable minifying while developing
 4. Before deploying, minify the individual JavaScript and CSS files:
 	- You can do it with [Ant-MinifyJsCss](https://github.com/yanli0303/Ant-MinifyJsCss)
 5. Pack your application sources and deploy 
+
+**Note**: set `"minify" => !YII_DEBUG` to disable minifying while developing
 
 ## License ##
 MIT
