@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Extends CClientScript and concatenate JS and CSS files that current Yii::app()->request used.
+ * Extends CClientScript and concatenate JavaScript and CSS files on current page.
  * @author Yan Li <peterleepersonal@gmail.com>
  */
 class MinifyClientScript extends CClientScript {
@@ -24,7 +24,7 @@ class MinifyClientScript extends CClientScript {
     public $rewriteCssUrl = true;
 
     /**
-     * @var bool If False, fallback to unminified version whenever any error occurred.
+     * @var bool If false, fallback to unminified version whenever any error occurred.
      */
     public $failOnError = false;
 
@@ -48,28 +48,25 @@ class MinifyClientScript extends CClientScript {
             if (is_dir($wd) || mkdir($wd, 0755, true)) {
                 $this->_wd = $wd;
             } else {
-                $msg = 'Unable to create directory for concatenating JavaScript/CSS files: ' . $wd;
-
-                if ($this->failOnError) {
-                    throw new Exception($msg);
-                } else {
-                    Yii::log($msg, CLogger::LEVEL_ERROR, 'ext.minify.' . __CLASS__ . '.' . __FUNCTION__ . '.line' . __LINE__);
-                }
+                throw new Exception('Unable to create directory: ' . $wd);
             }
         }
 
         return $this->_wd;
     }
 
-    protected function isMinified($filename) {
-        $fileNamePart = pathinfo($filename, PATHINFO_FILENAME);
-        $fileNameSuffix = substr($fileNamePart, -strlen($this->minFileSuffix));
-        return $this->minFileSuffix === $fileNameSuffix;
-    }
+    protected function findMinifiedFile($fileName) {
+        $lastDotPosition = strrpos($fileName, '.');
+        $extension = false === $lastDotPosition ? '' : substr($fileName, $lastDotPosition);
+        $fileNameWithoutExtension = false === $lastDotPosition ? $fileName : substr($fileName, 0, $lastDotPosition);
+        $fileNameSuffix = substr($fileNameWithoutExtension, -strlen($this->minFileSuffix));
 
-    protected function findMinifiedFile($filename) {
-        $lastDotPosition = strrpos($filename, '.');
-        $minFile = false === $lastDotPosition ? $filename . $this->minFileSuffix : substr($filename, 0, $lastDotPosition) . $this->minFileSuffix . substr($filename, $lastDotPosition);
+        if ($this->minFileSuffix === $fileNameSuffix) {
+            // already minified
+            return $fileName;
+        }
+
+        $minFile = $fileNameWithoutExtension . $this->minFileSuffix . $extension;
         return file_exists($minFile) ? $minFile : null;
     }
 
@@ -95,14 +92,17 @@ class MinifyClientScript extends CClientScript {
         return $minifiedFiles;
     }
 
-    private function getFileToConcat($file) {
-        return $this->isMinified($file) ? $file : $this->findMinifiedFile($file);
-    }
-
+    /**
+     * Get the max modified time among the given files.
+     * Note: it doesn't support microseconds.
+     * @param array $files The file paths.
+     * @return int returns time as a Unix timestamp.
+     * @throws Exception When a file was not found.
+     */
     protected function maxFileModifiedTime($files) {
         $max = 0;
         foreach ($files as $file) {
-            $lastModifiedTime = filemtime($file);
+            $lastModifiedTime = @filemtime($file);
             if (false === $lastModifiedTime) {
                 throw new Exception('Unable to get last modification time of file: ' . $file);
             }
@@ -138,12 +138,17 @@ class MinifyClientScript extends CClientScript {
     protected function removeUrlDomain($url) {
         $protocolIndex = strpos($url, '//');
         if (false === $protocolIndex) {
+            // unable to determine the domain without protocol, e.g. www.google.com/search?q=1234
             return $url;
         }
 
-        $urlWithoutProtocol = substr($url, $protocolIndex + 2);
-        $pathIndex = strpos($urlWithoutProtocol, '/');
-        return false === $pathIndex ? $url : substr($urlWithoutProtocol, $pathIndex);
+        $pathIndex = strpos($url, '/', false === $protocolIndex ? 0 : $protocolIndex + 2);
+        if (false === $pathIndex) {
+            $questionIndex = strpos($url, '?', false === $protocolIndex ? 0 : $protocolIndex + 2);
+            return false === $questionIndex ? '' : substr($url, $questionIndex);
+        }
+
+        return $pathIndex === 0 ? $url : substr($url, $pathIndex);
     }
 
     /**
@@ -161,7 +166,18 @@ class MinifyClientScript extends CClientScript {
      * @return string
      */
     protected function realurl($url) {
-        $normalizedUrl = str_replace('\\', '/', $url);
+        if (empty($url)) {
+            return $url;
+        }
+
+        $normalizedUrl = strtr($url, '\\', '/');
+        $protocolIndex = strpos($normalizedUrl, '//');
+        $pathIndex = strpos($normalizedUrl, '/', false === $protocolIndex ? 0 : $protocolIndex + 2);
+        $domain = false === $pathIndex ? '' : substr($normalizedUrl, 0, $pathIndex + 1);
+        if (false !== $pathIndex) {
+            $normalizedUrl = substr($normalizedUrl, $pathIndex + 1);
+        }
+
         $urlParts = explode('/', $normalizedUrl);
         $index = 0;
         while ($index < count($urlParts)) {
@@ -176,7 +192,7 @@ class MinifyClientScript extends CClientScript {
             }
         }
 
-        return implode('/', $urlParts);
+        return $domain . implode('/', $urlParts);
     }
 
     /**
@@ -187,7 +203,7 @@ class MinifyClientScript extends CClientScript {
      */
     protected function cssUrlAbsolute($cssFileContent, $cssFileUrl) {
         $me = $this;
-        $newUrlPrefix = $this->removeUrlDomain(dirname($cssFileUrl)) . '/';
+        $newUrlPrefix = dirname($cssFileUrl) . '/';
 
         // see http://www.w3.org/TR/CSS2/syndata.html#uri
         return preg_replace_callback('#\burl\(([^)]+)\)#i', function($matches) use (&$newUrlPrefix, &$me) {
@@ -208,7 +224,7 @@ class MinifyClientScript extends CClientScript {
         }, $cssFileContent);
     }
 
-    protected function filterLocals(&$items) {
+    protected function filterLocals($items) {
         $externs = array();
         $locals = array();
         foreach ($items as $url => $media) {
@@ -219,8 +235,7 @@ class MinifyClientScript extends CClientScript {
             }
         }
 
-        $items = $externs;
-        return $locals;
+        return array($externs, $locals);
     }
 
     protected function trimBaseUrl($items, $isCss) {
@@ -228,7 +243,7 @@ class MinifyClientScript extends CClientScript {
         $trimmedUrls = array();
         foreach ($items as $url => $media) {
             if ($this->isExternalUrl($url)) {
-                $trimmedUrls[$url] = $url;
+                $trimmedUrls[$url] = $media;
             } else {
                 $url = $this->canonicalizeUrl($url, $baseUrl);
                 $trimmedUrls[$url] = $isCss ? $media : $url;
@@ -240,7 +255,7 @@ class MinifyClientScript extends CClientScript {
 
     protected function generateBigMinFilePath($files, $extension) {
         $maxFileModifiedTime = $this->maxFileModifiedTime($files);
-        $id = $this->hashFileNames($files) . $maxFileModifiedTime;
+        $id = $this->hashFileNames($files) . '_' . $maxFileModifiedTime;
         return $this->getWorkingDir() . DIRECTORY_SEPARATOR . $id . $this->minFileSuffix . $extension;
     }
 
@@ -273,7 +288,7 @@ class MinifyClientScript extends CClientScript {
     protected function concat($files, $saveAs, $fnProcessFileContent = null) {
         $isFirst = true;
         foreach ($files as $key => $fileName) {
-            $fileContent = file_get_contents($fileName);
+            $fileContent = @file_get_contents($fileName);
             if (false === $fileContent) {
                 throw new Exception("Failed to get contents of '{$fileName}'.");
             }
@@ -283,8 +298,8 @@ class MinifyClientScript extends CClientScript {
             }
 
             // overwrites the existed $saveAs file
-            $flags = $isFirst ? LOCK_EX : (FILE_APPEND | LOCK_EX);
-            if (!file_put_contents($saveAs, $fileContent . PHP_EOL, $flags)) {
+            $flags = $isFirst ? 0 : FILE_APPEND;
+            if (!@file_put_contents($saveAs, $fileContent . PHP_EOL, $flags)) {
                 throw new Exception("Failed to append the contents of '{$fileName}' into '{$saveAs}'.");
             }
 
@@ -297,7 +312,7 @@ class MinifyClientScript extends CClientScript {
             return $this->trimBaseUrl ? $this->trimBaseUrl($groupItems, true) : $groupItems;
         }
 
-        $locals = $this->filterLocals($groupItems);
+        list($groupItems, $locals) = $this->filterLocals($groupItems);
         if (empty($locals)) {
             return $groupItems;
         }

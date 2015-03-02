@@ -1,4 +1,4 @@
-<!-- http://phpunit.de/manual/3.7/en/appendixes.configuration.html -->
+<!-- https://phpunit.de/manual/current/en/appendixes.configuration.html -->
 <phpunit bootstrap="bootstrap.php"
          colors="false"
          convertErrorsToExceptions="true"
