@@ -135,20 +135,30 @@ class MinifyClientScript extends CClientScript {
         return ltrim($url, '/');
     }
 
-    protected function removeUrlDomain($url) {
+    protected function splitUrl($url) {
+        $domain = '';
+        $query = '';
+
+        $questionIndex = strpos($url, '?');
+        if (false !== $questionIndex) {
+            $query = substr($url, $questionIndex);
+            $url = substr($url, 0, $questionIndex);
+        }
+
         $protocolIndex = strpos($url, '//');
-        if (false === $protocolIndex) {
-            // unable to determine the domain without protocol, e.g. www.google.com/search?q=1234
-            return $url;
+        // unable to determine the domain without protocol, e.g. www.google.com/search?q=1234
+        if (false !== $protocolIndex) {
+            $pathIndex = strpos($url, '/', $protocolIndex + 2);
+            if (false !== $pathIndex) {
+                $domain = substr($url, 0, $pathIndex);
+                $url = substr($url, $pathIndex);
+            } else {
+                $domain = $url;
+                $url = '';
+            }
         }
 
-        $pathIndex = strpos($url, '/', false === $protocolIndex ? 0 : $protocolIndex + 2);
-        if (false === $pathIndex) {
-            $questionIndex = strpos($url, '?', false === $protocolIndex ? 0 : $protocolIndex + 2);
-            return false === $questionIndex ? '' : substr($url, $questionIndex);
-        }
-
-        return $pathIndex === 0 ? $url : substr($url, $pathIndex);
+        return array($domain, $url, $query);
     }
 
     /**
@@ -170,12 +180,10 @@ class MinifyClientScript extends CClientScript {
             return $url;
         }
 
-        $normalizedUrl = strtr($url, '\\', '/');
-        $protocolIndex = strpos($normalizedUrl, '//');
-        $pathIndex = strpos($normalizedUrl, '/', false === $protocolIndex ? 0 : $protocolIndex + 2);
-        $domain = false === $pathIndex ? '' : substr($normalizedUrl, 0, $pathIndex + 1);
-        if (false !== $pathIndex) {
-            $normalizedUrl = substr($normalizedUrl, $pathIndex + 1);
+        $url = strtr($url, '\\', '/');
+        list($domain, $normalizedUrl, $query) = $this->splitUrl($url);
+        if (strlen($normalizedUrl) < 2) {
+            return $url;
         }
 
         $urlParts = explode('/', $normalizedUrl);
@@ -184,7 +192,7 @@ class MinifyClientScript extends CClientScript {
             $part = $urlParts[$index];
             if ($part === '.') {
                 array_splice($urlParts, $index, 1);
-            } else if ($part === '..' && $index > 0 && $urlParts[$index - 1] !== '..') {
+            } else if ($part === '..' && $index > 0 && $urlParts[$index - 1] !== '..' && $urlParts[$index - 1] !== '') {
                 array_splice($urlParts, $index - 1, 2);
                 $index -= 1;
             } else {
@@ -192,7 +200,7 @@ class MinifyClientScript extends CClientScript {
             }
         }
 
-        return $domain . implode('/', $urlParts);
+        return $domain . implode('/', $urlParts) . $query;
     }
 
     /**
@@ -203,20 +211,15 @@ class MinifyClientScript extends CClientScript {
      */
     protected function cssUrlAbsolute($cssFileContent, $cssFileUrl) {
         $me = $this;
-        $newUrlPrefix = dirname($cssFileUrl) . '/';
+        $baseUrl = Yii::app()->getBaseUrl();
+        $newUrlPrefix = $this->canonicalizeUrl(dirname($cssFileUrl), $baseUrl);
+        $newUrlPrefix = $baseUrl . '/' . (empty($newUrlPrefix) ? '' : $newUrlPrefix . '/');
 
         // see http://www.w3.org/TR/CSS2/syndata.html#uri
         return preg_replace_callback('#\burl\(([^)]+)\)#i', function($matches) use (&$newUrlPrefix, &$me) {
-            $url = $matches[1];
-            $isAbsUrl = $me->isExternalUrl($url) || substr($url, 0, 1) === '/';
+            $url = trim($matches[1], ' \'"');
+            $isAbsUrl = substr($url, 0, 1) === '/' || $me->isExternalUrl($url);
             if (!$isAbsUrl) {
-                $url = trim($url, ' ');
-                $firstChar = $url[0];
-                $lastChar = $url[strlen($url) - 1];
-                if ($firstChar === $lastChar && ($firstChar === '\'' || $firstChar === '"')) {
-                    $url = substr($url, 1, -1);
-                }
-
                 $url = $me->realurl($newUrlPrefix . $url);
             }
 
@@ -309,7 +312,7 @@ class MinifyClientScript extends CClientScript {
 
     protected function processScriptGroup($groupItems, $isCss) {
         if (!$this->minify) {
-            return $this->trimBaseUrl ? $this->trimBaseUrl($groupItems, true) : $groupItems;
+            return $this->trimBaseUrl ? $this->trimBaseUrl($groupItems, $isCss) : $groupItems;
         }
 
         list($groupItems, $locals) = $this->filterLocals($groupItems);
@@ -327,7 +330,7 @@ class MinifyClientScript extends CClientScript {
             if ($isCss && $this->rewriteCssUrl) {
                 $me = $this;
                 $this->concat($minFiles, $tmpBigFile, function($content, $url) use (&$me) {
-                    $me->cssUrlAbsolute($content, $url);
+                    return $me->cssUrlAbsolute($content, $url);
                 });
             } else {
                 $this->concat($minFiles, $tmpBigFile);
