@@ -1,4 +1,14 @@
 # Yii-MinifyClientScript #
+*By [Yan Li](https://github.com/yanli0303)* 
+
+<!--
+[![Latest Stable Version](http://img.shields.io/packagist/v/yanli0303/yii-minify-client-script.svg)](https://packagist.org/packages/yanli0303/yii-minify-client-script)
+[![Total Downloads](https://img.shields.io/packagist/dt/yanli0303/yii-minify-client-script.svg)](https://packagist.org/packages/yanli0303/yii-minify-client-script)
+-->
+[![Build Status](https://travis-ci.org/yanli0303/Yii-MinifyClientScript.svg?branch=master)](https://travis-ci.org/yanli0303/Yii-MinifyClientScript)
+[![License](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://packagist.org/packages/yanli0303/yii-minify-client-script)
+[![PayPayl donate button](http://img.shields.io/badge/paypal-donate-orange.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=silentwait4u%40gmail%2ecom&lc=US&item_name=Yan%20Li&no_note=0&currency_code=USD&bn=PP%2dDonationsBF%3apaypal%2ddonate%2ejpg%3aNonHostedGuest)
+
 A PHP [Yii framework](http://www.yiiframework.com/ "Yii Framework Home") extension to minify JavaScript and CSS files for a web page. 
 
 ## How does it work? ##
