@@ -1,5 +1,5 @@
 {
-    "name": "yanli/yii-minify-client-script",
+    "name": "yanli0303/yii-minify-client-script",
     "description": "A PHP Yii framework extension to minify JavaScript and CSS files for a web page.",
     "require": {
         "yiisoft/yii": ">=1.1.13 | <2"
