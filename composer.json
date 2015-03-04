@@ -2,6 +2,7 @@
     "name": "yanli0303/yii-minify-client-script",
     "description": "A PHP Yii framework extension to minify JavaScript and CSS files for a web page.",
     "require": {
+        "php": ">=5.3",
         "yiisoft/yii": ">=1.1.13 | <2"
     },
     "license": "MIT",
@@ -11,5 +12,8 @@
             "email": "peterleepersonal@gmail.com"
         }
     ],
-    "minimum-stability": "stable"
+    "minimum-stability": "stable",
+    "require-dev": {
+        "phpunit/phpunit": "~4.5"
+    }
 }

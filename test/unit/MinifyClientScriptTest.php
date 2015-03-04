@@ -202,23 +202,15 @@ class MinifyClientScriptTest extends CTestCase {
 
     private function findPublishedMinFile() {
         $assets = self::getAssetsDir();
-        $list = scandir($assets, SCANDIR_SORT_DESCENDING);
-        $dir = $list[0];
-        if (strlen($dir) < 3) {
-            $this->fail('Unable to find min file in: ' . $assets);
-            return null;
-        }
-
-        $list = scandir($assets . DIRECTORY_SEPARATOR . $dir, SCANDIR_SORT_DESCENDING);
+        $list = CFileHelper::findFiles($assets);
         $filename = $list[0];
         if (strlen($filename) < 3) {
             $this->fail('Unable to find min file in: ' . $assets);
             return null;
         }
 
-        $minFile = implode(DIRECTORY_SEPARATOR, array($assets, $dir, $filename));
-        $url = implode('/', array('assets', $dir, $filename));
-        return array($url, file_get_contents($minFile), $minFile);
+        $url = implode('/', array('assets', basename(dirname($filename)), basename($filename)));
+        return array($url, file_get_contents($filename));
     }
 
     public static function setUpBeforeClass() {
@@ -877,7 +869,7 @@ CSS;
         if (empty($expectedFileContent)) {
             $this->assertEquals($expected, $actual);
         } else {
-            list($fileurl, $actualFileContent, $filename) = $this->findPublishedMinFile();
+            list($fileurl, $actualFileContent) = $this->findPublishedMinFile();
             $this->assertEquals($expectedFileContent, $actualFileContent);
 
             $expected[$fileurl] = $isCss ? '' : $fileurl;
