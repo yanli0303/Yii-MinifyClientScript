@@ -64,6 +64,3 @@ return array(
     )
 );
 ```
-
-## License ##
-MIT
