@@ -122,6 +122,18 @@ class MinifyClientScriptTest extends CTestCase {
             self::BASE_URL . '/./test/../unit/../main/style.css' => implode(DIRECTORY_SEPARATOR, array($webroot, 'main', 'style.css')),
         );
 
+        $createDirs = array(
+            implode(DIRECTORY_SEPARATOR, array($webroot, 'path', 'to')),
+            implode(DIRECTORY_SEPARATOR, array($webroot, 'unit', 'test')),
+            implode(DIRECTORY_SEPARATOR, array($webroot, 'test', 'unit', 'main')),
+        );
+
+        foreach ($createDirs as $dir) {
+            if (!is_dir($dir)) {
+                self::createDirectory($dir, 0755, true);
+            }
+        }
+
         $index = 0;
         foreach ($cssLocalFiles as $css) {
             $dirName = dirname($css);
