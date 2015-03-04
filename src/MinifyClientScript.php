@@ -135,7 +135,7 @@ class MinifyClientScript extends CClientScript {
         return ltrim($url, '/');
     }
 
-    protected function splitUrl($url) {
+    public static function splitUrl($url) {
         $domain = '';
         $query = '';
 
@@ -166,7 +166,7 @@ class MinifyClientScript extends CClientScript {
      * Any URL that starts with either of ['http:', 'https:', '//'] is considered as external.
      * @return boolean If the given URL is relative, returns FALSE; otherwise returns TRUE;
      */
-    protected function isExternalUrl($url) {
+    public static function isExternalUrl($url) {
         return 0 === strncasecmp($url, 'https:', 6) || 0 === strncasecmp($url, 'http:', 5) || 0 === strncasecmp($url, '//', 2);
     }
 
@@ -175,13 +175,13 @@ class MinifyClientScript extends CClientScript {
      * @param string $url The url to process.
      * @return string
      */
-    protected function realurl($url) {
+    public static function realurl($url) {
         if (empty($url)) {
             return $url;
         }
 
         $url = strtr($url, '\\', '/');
-        list($domain, $normalizedUrl, $query) = $this->splitUrl($url);
+        list($domain, $normalizedUrl, $query) = self::splitUrl($url);
         if (strlen($normalizedUrl) < 2) {
             return $url;
         }
@@ -209,18 +209,17 @@ class MinifyClientScript extends CClientScript {
      * @param string $cssFileUrl The full URL to the CSS file.
      * @return string
      */
-    protected function cssUrlAbsolute($cssFileContent, $cssFileUrl) {
-        $me = $this;
+    public function cssUrlAbsolute($cssFileContent, $cssFileUrl) {
         $baseUrl = Yii::app()->getBaseUrl();
         $newUrlPrefix = $this->canonicalizeUrl(dirname($cssFileUrl), $baseUrl);
         $newUrlPrefix = $baseUrl . '/' . (empty($newUrlPrefix) ? '' : $newUrlPrefix . '/');
 
         // see http://www.w3.org/TR/CSS2/syndata.html#uri
-        return preg_replace_callback('#\burl\(([^)]+)\)#i', function($matches) use (&$newUrlPrefix, &$me) {
+        return preg_replace_callback('#\burl\(([^)]+)\)#i', function($matches) use (&$newUrlPrefix) {
             $url = trim($matches[1], ' \'"');
-            $isAbsUrl = substr($url, 0, 1) === '/' || $me->isExternalUrl($url);
+            $isAbsUrl = substr($url, 0, 1) === '/' || MinifyClientScript::isExternalUrl($url);
             if (!$isAbsUrl) {
-                $url = $me->realurl($newUrlPrefix . $url);
+                $url = MinifyClientScript::realurl($newUrlPrefix . $url);
             }
 
             return "url({$url})";
@@ -231,7 +230,7 @@ class MinifyClientScript extends CClientScript {
         $externs = array();
         $locals = array();
         foreach ($items as $url => $media) {
-            if ($this->isExternalUrl($url)) {
+            if (self::isExternalUrl($url)) {
                 $externs[$url] = $media;
             } else {
                 $locals[] = $url;
@@ -245,7 +244,7 @@ class MinifyClientScript extends CClientScript {
         $baseUrl = Yii::app()->getBaseUrl();
         $trimmedUrls = array();
         foreach ($items as $url => $media) {
-            if ($this->isExternalUrl($url)) {
+            if (self::isExternalUrl($url)) {
                 $trimmedUrls[$url] = $media;
             } else {
                 $url = $this->canonicalizeUrl($url, $baseUrl);
@@ -358,7 +357,6 @@ class MinifyClientScript extends CClientScript {
         }
 
         $this->getWorkingDir(); // for raising the error earlier: unable to create the working directory.
-
         // array('css url' => 'media type', ... more ...)
         $this->cssFiles = $this->processScriptGroup($this->cssFiles, true);
 
@@ -397,7 +395,7 @@ class MinifyClientScript extends CClientScript {
         if (YII_DEBUG) {
             $minifyStartTime = microtime(true);
         }
-        
+
         $this->processScripts();
         if (YII_DEBUG) {
             $minifyEndTime = microtime(true);
