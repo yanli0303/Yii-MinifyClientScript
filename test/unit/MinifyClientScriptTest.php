@@ -133,11 +133,11 @@ class MinifyClientScriptTest extends CTestCase {
         return array(
             $cssExterns,
             $cssLocals,
-            $cssLocalFiles,
+            //$cssLocalFiles,
             $cssLocalsTrimmedBaseUrl,
             $jsExterns,
             $jsLocals,
-            $jsLocalFiles,
+            //$jsLocalFiles,
             $jsLocalsTrimmedBaseUrl
         );
     }
@@ -179,7 +179,7 @@ class MinifyClientScriptTest extends CTestCase {
     public static function tearDownAfterClass() {
         parent::tearDownAfterClass();
 
-        //CFileHelper::removeDirectory(self::getWebRoot());
+        CFileHelper::removeDirectory(self::getWebRoot());
     }
 
     public function tearDown() {
@@ -748,7 +748,7 @@ CSS;
     public function processScriptGroupDataProvider() {
         $data = array();
 
-        list($cssExterns, $cssLocals, $cssLocalFiles, $cssLocalsTrimmedBaseUrl, $jsExterns, $jsLocals, $jsLocalFiles, $jsLocalsTrimmedBaseUrl) = $this->prepareTestScripts();
+        list($cssExterns, $cssLocals, $cssLocalsTrimmedBaseUrl, $jsExterns, $jsLocals, $jsLocalsTrimmedBaseUrl) = $this->prepareTestScripts();
 
         $cssItems = array_merge($cssLocals, $cssExterns);
         $jsItems = array_merge($jsLocals, $jsExterns);
@@ -788,10 +788,11 @@ CSS;
 
         // not processed previously, rewriteCssUrl
         $data[] = array(true, true, true, $cssItems, true, $cssExterns, $cssBigMinFileRewriteContent);
-        //$data[] = array(true, true, true, $jsItems, false, array_merge($jsExterns, array($jsBigMinFile => $jsBigMinFile)), array($jsBigMinFile => $jsBigMinFileContent));
+        $data[] = array(true, true, true, $jsItems, false, $jsExterns, $jsBigMinFileContent);
+
         // processed previously, rewriteCssUrl
-        //$data[] = array(true, true, true, $cssItems, true, array_merge($cssExterns, array($cssBigMinFile => '')), array($cssBigMinFile => $cssBigMinFileRewriteContent));
-        //$data[] = array(true, true, true, $jsItems, false, array_merge($jsExterns, array($jsBigMinFile => $jsBigMinFile)), array($jsBigMinFile => $jsBigMinFileContent));
+        $data[] = array(true, true, true, $cssItems, true, $cssExterns, $cssBigMinFileRewriteContent, true);
+        $data[] = array(true, true, true, $jsItems, false, $jsExterns, $jsBigMinFileContent, true);
 
         return $data;
     }
@@ -823,5 +824,90 @@ CSS;
             $expected[$fileurl] = $isCss ? '' : $fileurl;
             $this->assertEquals($expected, $actual);
         }
+    }
+
+    public function processScriptsDataProvider() {
+        $data = array();
+
+        $cssLocals = array(self::BASE_URL . '/style.css' => 'screen');
+        $cssResolvedLocals = array('style.css' => 'screen');
+
+        $jsLocals = array(
+            2 => array(self::BASE_URL . '/script.js' => self::BASE_URL . '/script.js')
+        );
+        $jsResolvedLocals = array(
+            2 => array('script.js' => 'script.js')
+        );
+
+        $data[] = array(false, false, array(), array(), array(), array());
+        $data[] = array(false, true, array(), array(), array(), array());
+
+        $data[] = array(true, false, array(), array(), array(), array());
+        $data[] = array(true, true, array(), array(), array(), array());
+
+        $data[] = array(false, false, $cssLocals, $jsLocals, $cssLocals, $jsLocals);
+        $data[] = array(false, true, $cssLocals, $jsLocals, $cssResolvedLocals, $jsResolvedLocals);
+
+        return $data;
+    }
+
+    /**
+     * @dataProvider processScriptsDataProvider
+     */
+    public function testProcessScripts($minify, $trimBaseUrl, $cssFiles, $scriptFiles, $expectedCssFiles, $expectedScriptFiles) {
+        $cs = new MinifyClientScript();
+        $cs->minify = $minify;
+        $cs->trimBaseUrl = $trimBaseUrl;
+        TestHelper::setProtectedProperty($cs, 'cssFiles', $cssFiles);
+        TestHelper::setProtectedProperty($cs, 'scriptFiles', $scriptFiles);
+
+        TestHelper::invokeProtectedMethod($cs, 'processScripts');
+
+        $actualCssFiles = TestHelper::getProtectedProperty($cs, 'cssFiles');
+        $this->assertEquals($actualCssFiles, $expectedCssFiles);
+
+        $actualScriptFiles = TestHelper::getProtectedProperty($cs, 'scriptFiles');
+        $this->assertEquals($actualScriptFiles, $expectedScriptFiles);
+    }
+
+    public function testRender() {
+        $cs = new MinifyClientScript();
+        $cs->minify = false;
+        $cs->trimBaseUrl = true;
+        TestHelper::setProtectedProperty($cs, 'hasScripts', true);
+        TestHelper::setProtectedProperty($cs, 'cssFiles', array(self::BASE_URL . '/style.css' => 'screen'));
+        TestHelper::setProtectedProperty($cs, 'scriptFiles', array(
+            2 => array(self::BASE_URL . '/script.js' => self::BASE_URL . '/script.js')
+        ));
+
+        TestHelper::setProtectedProperty(Yii::app()->getRequest(), '_requestUri', self::BASE_URL);
+
+        $expected = <<<HTML
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+<title></title>
+    </head>
+    <body>
+    <script type="text/javascript" src="script.js"></script>
+</body>
+</html>
+HTML;
+
+
+
+        $actual = <<<HTML
+<html>
+    <head>
+        <title></title>
+    </head>
+    <body>
+    </body>
+</html>
+HTML;
+
+        $cs->render($actual);
+
+        $this->assertEquals($expected, $actual);
     }
 }

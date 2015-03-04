@@ -357,10 +357,7 @@ class MinifyClientScript extends CClientScript {
             return;
         }
 
-        // Unable to create working directory, nothing can do
-        if (!$this->getWorkingDir()) {
-            return;
-        }
+        $this->getWorkingDir(); // for raising the error earlier: unable to create the working directory.
 
         // array('css url' => 'media type', ... more ...)
         $this->cssFiles = $this->processScriptGroup($this->cssFiles, true);
@@ -396,10 +393,11 @@ class MinifyClientScript extends CClientScript {
 
         $this->unifyScripts();
 
-        // The following is the only step that needed that we added to CClientScript->render()
+        // Begins my code
         if (YII_DEBUG) {
             $minifyStartTime = microtime(true);
         }
+        
         $this->processScripts();
         if (YII_DEBUG) {
             $minifyEndTime = microtime(true);
@@ -407,6 +405,7 @@ class MinifyClientScript extends CClientScript {
             $pageUrl = Yii::app()->getRequest()->getUrl();
             Yii::log("Minify took {$execution} ms on {$pageUrl}", CLogger::LEVEL_PROFILE, 'ext.minify.' . __CLASS__ . '.' . __FUNCTION__ . '.line' . __LINE__);
         }
+        // Ends my code
 
         $this->renderHead($output);
         if ($this->enableJavaScript) {
