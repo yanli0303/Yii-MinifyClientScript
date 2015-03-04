@@ -271,6 +271,7 @@ class MinifyClientScript extends CClientScript {
             $relativePath = $this->canonicalizeUrl($url, $baseUrl);
             $realpath = realpath($basePath . DIRECTORY_SEPARATOR . $relativePath);
             if (false === $realpath) {
+                print var_export($items);
                 throw new Exception('File not found: ' . $url);
             }
 
