@@ -3,25 +3,83 @@
 require_once(__DIR__ . '/../../src/MinifyClientScript.php');
 
 /**
- * @author Li Yan <yali@microstrategy.com>
+ * @author Yan Li <peterleepersonal@gmail.com>
  */
 class MinifyClientScriptTest extends CTestCase {
     const BASE_URL = '/MinifyTest';
 
     private $fileHandlesToClose = array();
 
+    /**
+     * Copied from Yii CFileHelper class.
+     * Removes a directory recursively.
+     * @param string $directory to be deleted recursively.
+     * @param array $options for the directory removal. Valid options are:
+     * <ul>
+     * <li>traverseSymlinks: boolean, whether symlinks to the directories should be traversed too.
+     * Defaults to `false`, meaning that the content of the symlinked directory would not be deleted.
+     * Only symlink would be removed in that default case.</li>
+     * </ul>
+     * Note, options parameter is available since 1.1.16
+     * @since 1.1.14
+     */
+    private static function removeDirectory($directory, $options = array()) {
+        if (!isset($options['traverseSymlinks']))
+            $options['traverseSymlinks'] = false;
+        $items = glob($directory . DIRECTORY_SEPARATOR . '{,.}*', GLOB_MARK | GLOB_BRACE);
+        foreach ($items as $item) {
+            if (basename($item) == '.' || basename($item) == '..')
+                continue;
+            if (substr($item, -1) == DIRECTORY_SEPARATOR) {
+                if (!$options['traverseSymlinks'] && is_link(rtrim($item, DIRECTORY_SEPARATOR)))
+                    unlink(rtrim($item, DIRECTORY_SEPARATOR));
+                else
+                    self::removeDirectory($item, $options);
+            } else
+                unlink($item);
+        }
+        if (is_dir($directory = rtrim($directory, '\\/'))) {
+            if (is_link($directory))
+                unlink($directory);
+            else
+                rmdir($directory);
+        }
+    }
+
+    /**
+     * Copied from Yii CFileHelper class.
+     * Shared environment safe version of mkdir. Supports recursive creation.
+     * For avoidance of umask side-effects chmod is used.
+     *
+     * @param string $dst path to be created
+     * @param integer $mode the permission to be set for newly created directories, if not set - 0777 will be used
+     * @param boolean $recursive whether to create directory structure recursive if parent dirs do not exist
+     * @return boolean result of mkdir
+     * @see mkdir
+     */
+    public static function createDirectory($dst, $mode = null, $recursive = false) {
+        if ($mode === null)
+            $mode = 0777;
+        $prevDir = dirname($dst);
+        if ($recursive && !is_dir($dst) && !is_dir($prevDir))
+            self::createDirectory(dirname($dst), $mode, true);
+        $res = mkdir($dst, $mode);
+        @chmod($dst, $mode);
+        return $res;
+    }
+
     private static function resetDir($dir) {
         if (is_dir($dir)) {
-            CFileHelper::removeDirectory($dir);
+            self::removeDirectory($dir);
         }
 
-        CFileHelper::createDirectory($dir, 0755, true);
+        self::createDirectory($dir, 0755, true);
     }
 
     private static function getWebRoot() {
         $webroot = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'MinifyClientScriptTest';
         if (!is_dir($webroot)) {
-            CFileHelper::createDirectory($webroot, 0755, true);
+            self::createDirectory($webroot, 0755, true);
         }
 
         return $webroot;
@@ -68,7 +126,7 @@ class MinifyClientScriptTest extends CTestCase {
         foreach ($cssLocalFiles as $css) {
             $dirName = dirname($css);
             if (!is_dir($dirName)) {
-                CFileHelper::createDirectory($dirName, 0755, true);
+                self::createDirectory($dirName, 0755, true);
             }
 
             $fakepath = '';
@@ -123,7 +181,7 @@ class MinifyClientScriptTest extends CTestCase {
         foreach ($jsLocalFiles as $js) {
             $dirName = dirname($js);
             if (!is_dir($dirName)) {
-                CFileHelper::createDirectory($dirName, 0755, true);
+                self::createDirectory($dirName, 0755, true);
             }
 
             file_put_contents($js, 'js' . $index);
@@ -174,12 +232,13 @@ class MinifyClientScriptTest extends CTestCase {
         Yii::app()->getRequest()->setBaseUrl(self::BASE_URL);
         Yii::setPathOfAlias('webroot', self::getWebRoot());
         Yii::app()->getAssetManager()->setBasePath(self::getAssetsDir());
+        $_SERVER['REQUEST_URI'] = self::BASE_URL;
     }
 
     public static function tearDownAfterClass() {
         parent::tearDownAfterClass();
 
-        CFileHelper::removeDirectory(self::getWebRoot());
+        self::removeDirectory(self::getWebRoot());
     }
 
     public function tearDown() {
@@ -222,7 +281,7 @@ class MinifyClientScriptTest extends CTestCase {
 
     public function testGetWorkingDir() {
         $wd = Yii::app()->getRuntimePath() . DIRECTORY_SEPARATOR . 'minify';
-        CFileHelper::removeDirectory($wd);
+        self::removeDirectory($wd);
 
         if (is_dir($wd)) {
             $this->fail('Unable to remove minify working directory before test.');
@@ -313,9 +372,8 @@ class MinifyClientScriptTest extends CTestCase {
     public function testMaxFileModifiedTime() {
         $files = array(
             __FILE__,
-            __DIR__ . '/../bootstrap.php',
-            __DIR__ . '/../phpunit.xml',
-            __DIR__ . '/../../src/MinifyClientScript.php',
+            self::getWebRoot() . DIRECTORY_SEPARATOR . 'style.css',
+            self::getWebRoot() . DIRECTORY_SEPARATOR . 'script.js',
             tempnam(self::getWebRoot(), 'max')
         );
 
@@ -328,9 +386,9 @@ class MinifyClientScriptTest extends CTestCase {
     public function testHashFileNames() {
         $files = array(
             __FILE__,
-            __DIR__ . '/../bootstrap.php',
-            __DIR__ . '/../phpunit.xml',
-            __DIR__ . '/../../src/MinifyClientScript.php'
+            self::getWebRoot() . DIRECTORY_SEPARATOR . 'style.css',
+            self::getWebRoot() . DIRECTORY_SEPARATOR . 'script.js',
+            tempnam(self::getWebRoot(), 'has')
         );
 
         $cs = new MinifyClientScript();
@@ -643,9 +701,9 @@ CSS;
 
         $files = array(
             __FILE__,
-            __DIR__ . '/../bootstrap.php',
-            __DIR__ . '/../phpunit.xml',
-            __DIR__ . '/../../src/MinifyClientScript.php'
+            self::getWebRoot() . DIRECTORY_SEPARATOR . 'style.css',
+            self::getWebRoot() . DIRECTORY_SEPARATOR . 'script.js',
+            tempnam(self::getWebRoot(), 'has')
         );
 
         $unixTime = '_' . time();
@@ -666,7 +724,7 @@ CSS;
         CFileHelper::copyDirectory(__DIR__, Yii::getPathOfAlias('webroot') . DIRECTORY_SEPARATOR . basename(__DIR__));
 
         $files = array(
-            'unit/' . basename(__FILE__),
+            'script.js',
             '../../../../not/exist/style.css'
         );
 
@@ -731,7 +789,8 @@ CSS;
     public function testConcat() {
         $files = array(
             'current' => __FILE__,
-            'bootstrap' => dirname(__DIR__) . DIRECTORY_SEPARATOR . 'bootstrap.php'
+            'style' => self::getWebRoot() . DIRECTORY_SEPARATOR . 'style.css',
+            'script' => self::getWebRoot() . DIRECTORY_SEPARATOR . 'script.js'
         );
 
         $saveAs = tempnam(Yii::getPathOfAlias('webroot'), 'cat');
@@ -741,7 +800,7 @@ CSS;
     }));
 
         $actual = file_get_contents($saveAs);
-        $expected = 'current' . PHP_EOL . 'bootstrap' . PHP_EOL;
+        $expected = 'current' . PHP_EOL . 'style' . PHP_EOL . 'script' . PHP_EOL;
         $this->assertEquals($expected, $actual);
     }
 
@@ -879,8 +938,6 @@ CSS;
         TestHelper::setProtectedProperty($cs, 'scriptFiles', array(
             2 => array(self::BASE_URL . '/script.js' => self::BASE_URL . '/script.js')
         ));
-
-        TestHelper::setProtectedProperty(Yii::app()->getRequest(), '_requestUri', self::BASE_URL);
 
         $expected = <<<HTML
 <html>
