@@ -9,36 +9,37 @@ class MinifyClientScriptTest extends CTestCase {
     const BASE_URL = '/MinifyTest';
 
     private $fileHandlesToClose = array();
-    private $testPageScripts = null;
+
+    private static function resetDir($dir) {
+        if (is_dir($dir)) {
+            CFileHelper::removeDirectory($dir);
+        }
+
+        CFileHelper::createDirectory($dir, 0755, true);
+    }
 
     private static function getWebRoot() {
         $webroot = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'MinifyClientScriptTest';
         if (!is_dir($webroot)) {
-            mkdir($webroot, 0755);
+            CFileHelper::createDirectory($webroot, 0755, true);
         }
 
         return $webroot;
     }
 
-    private static function prepareAppDirs() {
-        $webroot = self::getWebRoot();
-        $runtime = $webroot . DIRECTORY_SEPARATOR . 'runtime';
-        CFileHelper::removeDirectory($runtime);
-        CFileHelper::createDirectory($runtime, 0755, true);
-
-        $assets = $webroot . DIRECTORY_SEPARATOR . 'assets';
-        CFileHelper::removeDirectory($assets);
-        CFileHelper::createDirectory($assets, 0755, true);
-
-        clearstatcache();
-        return array($webroot, $runtime, $assets);
+    private static function getAssetsDir() {
+        return self::getWebRoot() . DIRECTORY_SEPARATOR . 'assets';
     }
 
-    private function prepareTestPage() {
-        if ($this->testPageScripts) {
-            return $this->testPageScripts;
-        }
+    private static function getRuntimeDir() {
+        return self::getWebRoot() . DIRECTORY_SEPARATOR . 'runtime';
+    }
 
+    private static function getMinifyDir() {
+        return self::getWebRoot() . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'minify';
+    }
+
+    private static function prepareTestScripts() {
         $webroot = self::getWebRoot();
 
         $cssExterns = array(
@@ -129,7 +130,7 @@ class MinifyClientScriptTest extends CTestCase {
             $index += 1;
         }
 
-        $this->testPageScripts = array(
+        return array(
             $cssExterns,
             $cssLocals,
             $cssLocalFiles,
@@ -139,27 +140,46 @@ class MinifyClientScriptTest extends CTestCase {
             $jsLocalFiles,
             $jsLocalsTrimmedBaseUrl
         );
+    }
 
-        return $this->testPageScripts;
+    private function findPublishedMinFile() {
+        $assets = self::getAssetsDir();
+        $list = scandir($assets, SCANDIR_SORT_DESCENDING);
+        $dir = $list[0];
+        if (strlen($dir) < 3) {
+            $this->fail('Unable to find min file in: ' . $assets);
+            return null;
+        }
+
+        $list = scandir($assets . DIRECTORY_SEPARATOR . $dir, SCANDIR_SORT_DESCENDING);
+        $filename = $list[0];
+        if (strlen($filename) < 3) {
+            $this->fail('Unable to find min file in: ' . $assets);
+            return null;
+        }
+
+        $minFile = implode(DIRECTORY_SEPARATOR, array($assets, $dir, $filename));
+        $url = implode('/', array('assets', $dir, $filename));
+        return array($url, file_get_contents($minFile), $minFile);
     }
 
     public static function setUpBeforeClass() {
         parent::setUpBeforeClass();
 
-        list($webroot, $runtime, $assets) = self::prepareAppDirs();
+        self::resetDir(self::getAssetsDir());
+        self::resetDir(self::getRuntimeDir());
 
-        Yii::app()->setRuntimePath($runtime);
+        Yii::app()->setRuntimePath(self::getRuntimeDir());
         Yii::app()->getRequest()->setHostInfo('http://10.197.38.188:8080');
         Yii::app()->getRequest()->setBaseUrl(self::BASE_URL);
-        Yii::setPathOfAlias('webroot', $webroot);
-        Yii::app()->getAssetManager()->setBasePath($assets);
+        Yii::setPathOfAlias('webroot', self::getWebRoot());
+        Yii::app()->getAssetManager()->setBasePath(self::getAssetsDir());
     }
 
     public static function tearDownAfterClass() {
         parent::tearDownAfterClass();
 
-        $webroot = Yii::getPathOfAlias('webroot');
-        //CFileHelper::removeDirectory($webroot);
+        //CFileHelper::removeDirectory(self::getWebRoot());
     }
 
     public function tearDown() {
@@ -291,27 +311,18 @@ class MinifyClientScriptTest extends CTestCase {
     }
 
     public function testMaxFileModifiedTime() {
-        $tmp = sys_get_temp_dir() . DIRECTORY_SEPARATOR;
-        $createFiles = array(
-            $tmp . 'yanli.js',
-            $tmp . 'yanli.min.js'
-        );
-
-        $this->createFiles($createFiles);
-
-        $files = array_merge(array(
+        $files = array(
             __FILE__,
             __DIR__ . '/../bootstrap.php',
             __DIR__ . '/../phpunit.xml',
-            __DIR__ . '/../../src/MinifyClientScript.php'
-                ), $createFiles);
+            __DIR__ . '/../../src/MinifyClientScript.php',
+            tempnam(self::getWebRoot(), 'max')
+        );
 
         $cs = new MinifyClientScript();
         $actual = TestHelper::invokeProtectedMethod($cs, 'maxFileModifiedTime', array($files));
         $expected = time();
         $this->assertLessThan(1, $expected - $actual);
-
-        $this->removeFiles($createFiles);
     }
 
     public function testHashFileNames() {
@@ -737,7 +748,7 @@ CSS;
     public function processScriptGroupDataProvider() {
         $data = array();
 
-        list($cssExterns, $cssLocals, $cssLocalFiles, $cssLocalsTrimmedBaseUrl, $jsExterns, $jsLocals, $jsLocalFiles, $jsLocalsTrimmedBaseUrl) = $this->prepareTestPage();
+        list($cssExterns, $cssLocals, $cssLocalFiles, $cssLocalsTrimmedBaseUrl, $jsExterns, $jsLocals, $jsLocalFiles, $jsLocalsTrimmedBaseUrl) = $this->prepareTestScripts();
 
         $cssItems = array_merge($cssLocals, $cssExterns);
         $jsItems = array_merge($jsLocals, $jsExterns);
@@ -754,11 +765,6 @@ CSS;
         $data[] = array(true, true, true, $cssExterns, true, $cssExterns);
         $data[] = array(true, true, true, $jsExterns, false, $jsExterns);
 
-        $cssLocalsPathsFmtime = array_map(function($file) {
-            return filemtime($file);
-        }, $cssLocalFiles);
-        $cssMaxFmtime = max($cssLocalsPathsFmtime);
-        $cssBigMinFile = "assets/84858dc8/0797a7e73bc71b9c014b80f8df557997_{$cssMaxFmtime}.min.css";
         $cssBigMinFileNoRewriteContent = implode(PHP_EOL, array(
                     '.class1{background-image:url("../image/path0/./path0_not_useful/../path1/./path1_not_useful/../img.png")}',
                     '.class1{background-image:url("../image/path0/./path0_not_useful/../path1/./path1_not_useful/../img.png")}',
@@ -774,21 +780,15 @@ CSS;
                     '.class1{background-image:url(' . self::BASE_URL . '/image/path0/path1/path2/path3/path4/img.png)}',
                 )) . PHP_EOL;
 
-        $jsLocalPathsFmtime = array_map(function($file) {
-            return filemtime($file);
-        }, $jsLocalFiles);
-        $jsMaxFmtime = max($jsLocalPathsFmtime);
-        $jsBigMinFile = "assets/84858dc8/f75335c4546cc054bc013b566b0274e3_{$jsMaxFmtime}.min.js";
         $jsBigMinFileContent = implode(PHP_EOL, array('js1', 'js1', 'js2', 'js3', 'js4')) . PHP_EOL;
 
         // not processed previously, not rewriteCssUrl
-        $data[] = array(true, true, false, $cssItems, true, array_merge($cssExterns, array($cssBigMinFile => '')), array($cssBigMinFile => $cssBigMinFileNoRewriteContent));
-        $data[] = array(true, true, false, $jsItems, false, array_merge($jsExterns, array($jsBigMinFile => $jsBigMinFile)), array($jsBigMinFile => $jsBigMinFileContent));
+        $data[] = array(true, true, false, $cssItems, true, $cssExterns, $cssBigMinFileNoRewriteContent);
+        $data[] = array(true, true, false, $jsItems, false, $jsExterns, $jsBigMinFileContent);
 
         // not processed previously, rewriteCssUrl
-        //$data[] = array(true, true, true, $cssItems, true, array_merge($cssExterns, array($cssBigMinFile => '')), array($cssBigMinFile => $cssBigMinFileRewriteContent));
+        $data[] = array(true, true, true, $cssItems, true, $cssExterns, $cssBigMinFileRewriteContent);
         //$data[] = array(true, true, true, $jsItems, false, array_merge($jsExterns, array($jsBigMinFile => $jsBigMinFile)), array($jsBigMinFile => $jsBigMinFileContent));
-
         // processed previously, rewriteCssUrl
         //$data[] = array(true, true, true, $cssItems, true, array_merge($cssExterns, array($cssBigMinFile => '')), array($cssBigMinFile => $cssBigMinFileRewriteContent));
         //$data[] = array(true, true, true, $jsItems, false, array_merge($jsExterns, array($jsBigMinFile => $jsBigMinFile)), array($jsBigMinFile => $jsBigMinFileContent));
@@ -799,25 +799,29 @@ CSS;
     /**
      * @dataProvider processScriptGroupDataProvider
      */
-    public function testProcessScriptGroup($minify, $trimBaseUrl, $rewriteCssUrl, $groupItems, $isCss, $expected, $fileContentAssertions = null) {
+    public function testProcessScriptGroup($minify, $trimBaseUrl, $rewriteCssUrl, $groupItems, $isCss, $expected, $expectedFileContent = null, $doItAgain = false) {
+        self::resetDir(self::getAssetsDir());
+        self::resetDir(self::getMinifyDir());
+        TestHelper::setProtectedProperty(Yii::app()->getAssetManager(), '_published', array());
+
         $cs = new MinifyClientScript();
         $cs->minify = $minify;
         $cs->trimBaseUrl = $trimBaseUrl;
         $cs->rewriteCssUrl = $rewriteCssUrl;
 
-        //$this->prepareAppDirs();
-
         $actual = TestHelper::invokeProtectedMethod($cs, 'processScriptGroup', array($groupItems, $isCss));
-        $this->assertEquals($expected, $actual);
+        if ($doItAgain) {
+            $actual = TestHelper::invokeProtectedMethod($cs, 'processScriptGroup', array($groupItems, $isCss));
+        }
 
-        if (!empty($fileContentAssertions)) {
-            $webroot = $this->getWebRoot() . DIRECTORY_SEPARATOR;
+        if (empty($expectedFileContent)) {
+            $this->assertEquals($expected, $actual);
+        } else {
+            list($fileurl, $actualFileContent, $filename) = $this->findPublishedMinFile();
+            $this->assertEquals($expectedFileContent, $actualFileContent);
 
-            foreach ($fileContentAssertions as $filename => $expectedFileContent) {
-                $fileInAssets = $webroot . $filename;
-                $actualFileContent = file_get_contents($fileInAssets);
-                $this->assertEquals($expectedFileContent, $actualFileContent);
-            }
+            $expected[$fileurl] = $isCss ? '' : $fileurl;
+            $this->assertEquals($expected, $actual);
         }
     }
 }
