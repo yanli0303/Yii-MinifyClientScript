@@ -11,7 +11,7 @@ before_script:
   - wget -nc http://getcomposer.org/composer.phar
   - php composer.phar install
 
-script: phpunit -c test/phpunit.xml
+script: ./vendor/bin/phpunit -c test/phpunit.xml
 
 notifications:
   email:
