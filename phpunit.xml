@@ -6,7 +6,7 @@
     </logging>
     <testsuites>
         <testsuite name="Unit Tests">
-            <directory>unit</directory>
+            <directory>test/unit</directory>
         </testsuite>
     </testsuites>
     <filter>
