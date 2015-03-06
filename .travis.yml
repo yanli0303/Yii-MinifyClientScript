@@ -9,9 +9,13 @@ php:
   
 before_script:
   - wget -nc http://getcomposer.org/composer.phar
-  - php composer.phar install
+  - php composer.phar install --dev --no-interaction
 
-script: ./vendor/bin/phpunit -c test/phpunit.xml
+script:
+  - php vendor/bin/phpunit
+
+after_script:
+  - php vendor/bin/coveralls -v
 
 notifications:
   email:
