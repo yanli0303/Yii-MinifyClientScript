@@ -939,20 +939,6 @@ CSS;
             2 => array(self::BASE_URL . '/script.js' => self::BASE_URL . '/script.js')
         ));
 
-        $expected = <<<HTML
-<html>
-    <head>
-        <link rel="stylesheet" type="text/css" href="style.css" media="screen" />
-<title></title>
-    </head>
-    <body>
-    <script type="text/javascript" src="script.js"></script>
-</body>
-</html>
-HTML;
-
-
-
         $actual = <<<HTML
 <html>
     <head>
@@ -964,7 +950,7 @@ HTML;
 HTML;
 
         $cs->render($actual);
-
-        $this->assertEquals($expected, $actual);
+        $this->assertContains('<link rel="stylesheet" type="text/css" href="style.css" media="screen" />', $actual);
+        $this->assertContains('<script type="text/javascript" src="script.js"></script>', $actual);
     }
 }
