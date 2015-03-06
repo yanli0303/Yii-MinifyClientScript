@@ -15,7 +15,6 @@
     "minimum-stability": "stable",
     "require-dev": {
         "phpunit/phpunit": "~4.5",
-        "satooshi/php-coveralls": "dev-master",
-        "phpunit/php-invoker": "~1.1"
+        "satooshi/php-coveralls": "dev-master"
     }
 }
