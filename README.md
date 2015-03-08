@@ -65,3 +65,7 @@ return array(
     )
 );
 ```
+
+## TODO ##
+
+Minify and concatenate the JavaScript and CSS files per package at *build time*
