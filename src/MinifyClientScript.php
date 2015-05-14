@@ -2,24 +2,26 @@
 
 /**
  * Extends CClientScript and concatenate JavaScript and CSS files on current page.
+ *
  * @author Yan Li <peterleepersonal@gmail.com>
  */
-class MinifyClientScript extends CClientScript {
+class MinifyClientScript extends CClientScript
+{
     /**
      * @var bool Whether to enable minifying.
-     * Defaults to true.
+     *           Defaults to true.
      */
     public $minify = true;
 
     /**
      * @var bool Whether remove the Yii::app()->baseUrl from the beginning of resource urls.
-     * Defaults to true.
+     *           Defaults to true.
      */
     public $trimBaseUrl = true;
 
     /**
      * @var bool Whether to rewrite "url()" rules of CSS after relocating CSS files.
-     * Defaults to true.
+     *           Defaults to true.
      */
     public $rewriteCssUrl = true;
 
@@ -30,32 +32,35 @@ class MinifyClientScript extends CClientScript {
 
     /**
      * @var string The filename(without extension) suffix of minified files.
-     * Defaults to '.min' which means a minified file is named as in "jquery.min.js".
+     *             Defaults to '.min' which means a minified file is named as in "jquery.min.js".
      */
     public $minFileSuffix = '.min';
 
     /**
      * The working directory for minifying.
+     *
      * @var string Path to the working directory, which is "~/runtime/minify"
      */
     private $_wd = null;
 
-    protected function getWorkingDir() {
+    protected function getWorkingDir()
+    {
         if (!$this->_wd) {
-            $wd = Yii::app()->getRuntimePath() . DIRECTORY_SEPARATOR . 'minify';
+            $wd = Yii::app()->getRuntimePath().DIRECTORY_SEPARATOR.'minify';
 
             // create the directory if not existed
             if (is_dir($wd) || mkdir($wd, 0755, true)) {
                 $this->_wd = $wd;
             } else {
-                throw new Exception('Unable to create directory: ' . $wd);
+                throw new Exception('Unable to create directory: '.$wd);
             }
         }
 
         return $this->_wd;
     }
 
-    protected function findMinifiedFile($fileName) {
+    protected function findMinifiedFile($fileName)
+    {
         $lastDotPosition = strrpos($fileName, '.');
         $extension = false === $lastDotPosition ? '' : substr($fileName, $lastDotPosition);
         $fileNameWithoutExtension = false === $lastDotPosition ? $fileName : substr($fileName, 0, $lastDotPosition);
@@ -66,21 +71,23 @@ class MinifyClientScript extends CClientScript {
             return $fileName;
         }
 
-        $minFile = $fileNameWithoutExtension . $this->minFileSuffix . $extension;
+        $minFile = $fileNameWithoutExtension.$this->minFileSuffix.$extension;
+
         return file_exists($minFile) ? $minFile : null;
     }
 
-    protected function findMinifiedFiles($files) {
+    protected function findMinifiedFiles($files)
+    {
         $minifiedFiles = array();
         foreach ($files as $key => $file) {
             $minFile = $this->findMinifiedFile($file);
             if (!$minFile) {
                 if ($this->failOnError) {
-                    throw new Exception('The minified version was not found for: ' . $file);
+                    throw new Exception('The minified version was not found for: '.$file);
                 }
 
-                $msg = 'The minified version was not found for: ' . $file . ', use itself instead.';
-                Yii::log($msg, CLogger::LEVEL_INFO, 'ext.minify.' . __CLASS__ . '.' . __FUNCTION__ . '.line' . __LINE__);
+                $msg = 'The minified version was not found for: '.$file.', use itself instead.';
+                Yii::log($msg, CLogger::LEVEL_INFO, 'ext.minify.'.__CLASS__.'.'.__FUNCTION__.'.line'.__LINE__);
 
                 // fallback to unminified version
                 $minFile = $file;
@@ -95,16 +102,20 @@ class MinifyClientScript extends CClientScript {
     /**
      * Get the max modified time among the given files.
      * Note: it doesn't support microseconds.
+     *
      * @param array $files The file paths.
+     *
      * @return int returns time as a Unix timestamp.
+     *
      * @throws Exception When a file was not found.
      */
-    protected function maxFileModifiedTime($files) {
+    protected function maxFileModifiedTime($files)
+    {
         $max = 0;
         foreach ($files as $file) {
             $lastModifiedTime = @filemtime($file);
             if (false === $lastModifiedTime) {
-                throw new Exception('Unable to get last modification time of file: ' . $file);
+                throw new Exception('Unable to get last modification time of file: '.$file);
             }
 
             if ($lastModifiedTime > $max) {
@@ -115,18 +126,23 @@ class MinifyClientScript extends CClientScript {
         return $max;
     }
 
-    protected function hashFileNames($files) {
+    protected function hashFileNames($files)
+    {
         $oneline = implode(PATH_SEPARATOR, $files);
+
         return md5($oneline);
     }
 
     /**
      * Removes the leading / and specified prefix from the url.
-     * @param string $url the url to canonicalize.
+     *
+     * @param string $url    the url to canonicalize.
      * @param string $prefix url prefix.
+     *
      * @return string
      */
-    protected function canonicalizeUrl($url, $prefix) {
+    protected function canonicalizeUrl($url, $prefix)
+    {
         $prefixLength = strlen($prefix);
         if ($prefixLength > 0 && 0 === strncasecmp($prefix, $url, $prefixLength)) {
             $url = substr($url, $prefixLength);
@@ -135,7 +151,8 @@ class MinifyClientScript extends CClientScript {
         return ltrim($url, '/');
     }
 
-    public static function splitUrl($url) {
+    public static function splitUrl($url)
+    {
         $domain = '';
         $query = '';
 
@@ -164,18 +181,23 @@ class MinifyClientScript extends CClientScript {
     /**
      * Check whether the given URL is relative or not.
      * Any URL that starts with either of ['http:', 'https:', '//'] is considered as external.
-     * @return boolean If the given URL is relative, returns FALSE; otherwise returns TRUE;
+     *
+     * @return bool If the given URL is relative, returns FALSE; otherwise returns TRUE;
      */
-    public static function isExternalUrl($url) {
+    public static function isExternalUrl($url)
+    {
         return 0 === strncasecmp($url, 'https:', 6) || 0 === strncasecmp($url, 'http:', 5) || 0 === strncasecmp($url, '//', 2);
     }
 
     /**
      * Resolves the '..' and '.' in the URL.
+     *
      * @param string $url The url to process.
+     *
      * @return string
      */
-    public static function realurl($url) {
+    public static function realurl($url)
+    {
         if (empty($url)) {
             return $url;
         }
@@ -192,7 +214,7 @@ class MinifyClientScript extends CClientScript {
             $part = $urlParts[$index];
             if ($part === '.') {
                 array_splice($urlParts, $index, 1);
-            } else if ($part === '..' && $index > 0 && $urlParts[$index - 1] !== '..' && $urlParts[$index - 1] !== '') {
+            } elseif ($part === '..' && $index > 0 && $urlParts[$index - 1] !== '..' && $urlParts[$index - 1] !== '') {
                 array_splice($urlParts, $index - 1, 2);
                 $index -= 1;
             } else {
@@ -200,33 +222,37 @@ class MinifyClientScript extends CClientScript {
             }
         }
 
-        return $domain . implode('/', $urlParts) . $query;
+        return $domain.implode('/', $urlParts).$query;
     }
 
     /**
      * Make url() rules of CSS absolute.
+     *
      * @param string $cssFileContent The content of the CSS file.
-     * @param string $cssFileUrl The full URL to the CSS file.
+     * @param string $cssFileUrl     The full URL to the CSS file.
+     *
      * @return string
      */
-    public function cssUrlAbsolute($cssFileContent, $cssFileUrl) {
+    public function cssUrlAbsolute($cssFileContent, $cssFileUrl)
+    {
         $baseUrl = Yii::app()->getBaseUrl();
         $newUrlPrefix = $this->canonicalizeUrl(dirname($cssFileUrl), $baseUrl);
-        $newUrlPrefix = $baseUrl . '/' . (empty($newUrlPrefix) ? '' : $newUrlPrefix . '/');
+        $newUrlPrefix = $baseUrl.'/'.(empty($newUrlPrefix) ? '' : $newUrlPrefix.'/');
 
         // see http://www.w3.org/TR/CSS2/syndata.html#uri
-        return preg_replace_callback('#\burl\(([^)]+)\)#i', function($matches) use (&$newUrlPrefix) {
+        return preg_replace_callback('#\burl\(([^)]+)\)#i', function ($matches) use (&$newUrlPrefix) {
             $url = trim($matches[1], ' \'"');
             $isAbsUrl = substr($url, 0, 1) === '/' || MinifyClientScript::isExternalUrl($url);
             if (!$isAbsUrl) {
-                $url = MinifyClientScript::realurl($newUrlPrefix . $url);
+                $url = MinifyClientScript::realurl($newUrlPrefix.$url);
             }
 
             return "url({$url})";
         }, $cssFileContent);
     }
 
-    protected function filterLocals($items) {
+    protected function filterLocals($items)
+    {
         $externs = array();
         $locals = array();
         foreach ($items as $url => $media) {
@@ -240,7 +266,8 @@ class MinifyClientScript extends CClientScript {
         return array($externs, $locals);
     }
 
-    protected function trimBaseUrl($items, $isCss) {
+    protected function trimBaseUrl($items, $isCss)
+    {
         $baseUrl = Yii::app()->getBaseUrl();
         $trimmedUrls = array();
         foreach ($items as $url => $media) {
@@ -255,22 +282,25 @@ class MinifyClientScript extends CClientScript {
         return $trimmedUrls;
     }
 
-    protected function generateBigMinFilePath($files, $extension) {
+    protected function generateBigMinFilePath($files, $extension)
+    {
         $maxFileModifiedTime = $this->maxFileModifiedTime($files);
-        $id = $this->hashFileNames($files) . '_' . $maxFileModifiedTime;
-        return $this->getWorkingDir() . DIRECTORY_SEPARATOR . $id . $this->minFileSuffix . $extension;
+        $id = $this->hashFileNames($files).'_'.$maxFileModifiedTime;
+
+        return $this->getWorkingDir().DIRECTORY_SEPARATOR.$id.$this->minFileSuffix.$extension;
     }
 
-    protected function getFiles($items) {
+    protected function getFiles($items)
+    {
         $baseUrl = Yii::app()->getBaseUrl();
         $basePath = Yii::getPathOfAlias('webroot');
 
         $files = array();
         foreach ($items as $url) {
             $relativePath = $this->canonicalizeUrl($url, $baseUrl);
-            $realpath = realpath($basePath . DIRECTORY_SEPARATOR . $relativePath);
+            $realpath = realpath($basePath.DIRECTORY_SEPARATOR.$relativePath);
             if (false === $realpath) {
-                throw new Exception('File not found: ' . $url);
+                throw new Exception('File not found: '.$url);
             }
 
             $files[$url] = $realpath;
@@ -281,13 +311,16 @@ class MinifyClientScript extends CClientScript {
 
     /**
      * Concatenate specified text files into one.
-     * @param array $files List of files to concatenate (full path).
-     * @param string $saveAs The file name(full path) of concatenated file.
+     *
+     * @param array    $files                List of files to concatenate (full path).
+     * @param string   $saveAs               The file name(full path) of concatenated file.
      * @param callable $fnProcessFileContent Callback function which accepts an argument of $fileContent,
-     * And returns the modified $fileContent.
+     *                                       And returns the modified $fileContent.
+     *
      * @return bool Returns TRUE on success, otherwise returns FALSE.
      */
-    protected function concat($files, $saveAs, $fnProcessFileContent = null) {
+    protected function concat($files, $saveAs, $fnProcessFileContent = null)
+    {
         $isFirst = true;
         foreach ($files as $key => $fileName) {
             $fileContent = @file_get_contents($fileName);
@@ -301,7 +334,7 @@ class MinifyClientScript extends CClientScript {
 
             // overwrites the existed $saveAs file
             $flags = $isFirst ? 0 : FILE_APPEND;
-            if (!@file_put_contents($saveAs, $fileContent . PHP_EOL, $flags)) {
+            if (!@file_put_contents($saveAs, $fileContent.PHP_EOL, $flags)) {
                 throw new Exception("Failed to append the contents of '{$fileName}' into '{$saveAs}'.");
             }
 
@@ -309,7 +342,8 @@ class MinifyClientScript extends CClientScript {
         }
     }
 
-    protected function processScriptGroup($groupItems, $isCss) {
+    protected function processScriptGroup($groupItems, $isCss)
+    {
         if (!$this->minify) {
             return $this->trimBaseUrl ? $this->trimBaseUrl($groupItems, $isCss) : $groupItems;
         }
@@ -328,7 +362,7 @@ class MinifyClientScript extends CClientScript {
             $tmpBigFile = tempnam($this->getWorkingDir(), 'min');
             if ($isCss && $this->rewriteCssUrl) {
                 $me = $this;
-                $this->concat($minFiles, $tmpBigFile, function($content, $url) use (&$me) {
+                $this->concat($minFiles, $tmpBigFile, function ($content, $url) use (&$me) {
                     return $me->cssUrlAbsolute($content, $url);
                 });
             } else {
@@ -347,10 +381,12 @@ class MinifyClientScript extends CClientScript {
 
         // the new css media will be empty.
         $groupItems[$bigFileUrl] = $isCss ? '' : $bigFileUrl;
+
         return $groupItems;
     }
 
-    protected function processScripts() {
+    protected function processScripts()
+    {
         // No work to do
         if (!($this->minify || $this->trimBaseUrl)) {
             return;
@@ -376,9 +412,11 @@ class MinifyClientScript extends CClientScript {
      * This method is called in {@link CController::render} when it finishes
      * rendering content. CClientScript thus gets a chance to insert script tags
      * at <code>head</code> and <code>body</code> sections in the HTML output.
+     *
      * @param string $output the existing output that needs to be inserted with script tags
      */
-    public function render(&$output) {
+    public function render(&$output)
+    {
         if (!$this->hasScripts) {
             return;
         }
@@ -401,7 +439,7 @@ class MinifyClientScript extends CClientScript {
             $minifyEndTime = microtime(true);
             $execution = ($minifyEndTime - $minifyStartTime) * 1000;
             $pageUrl = Yii::app()->getRequest()->getUrl();
-            Yii::log("Minify took {$execution} ms on {$pageUrl}", CLogger::LEVEL_PROFILE, 'ext.minify.' . __CLASS__ . '.' . __FUNCTION__ . '.line' . __LINE__);
+            Yii::log("Minify took {$execution} ms on {$pageUrl}", CLogger::LEVEL_PROFILE, 'ext.minify.'.__CLASS__.'.'.__FUNCTION__.'.line'.__LINE__);
         }
         // Ends my code
 
