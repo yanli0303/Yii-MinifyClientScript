@@ -56,7 +56,7 @@ return array(
                     'bower_components/bootstrap/dist/js/bootstrap.js',
                     'js/home/home_index.js'
                 ),
-                'js' => array(
+                'css' => array(
                     'bower_components/bootstrap/dist/css/bootstrap.css',
                     'css/home/home_index.css'
                 )
