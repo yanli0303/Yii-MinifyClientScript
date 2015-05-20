@@ -70,6 +70,6 @@ return array(
 
 It requires **sticky session** from load balance server, otherwise you'll encounter HTTP 404 problems.
 
-## TODO ##
+## Alternatives ##
 
-Minify and concatenate the JavaScript and CSS files per package at **build time**, so it doesn't require **sticky session** from load balance server.
+- EClientScript: [https://github.com/muayyad-alsadi/yii-EClientScript](https://github.com/muayyad-alsadi/yii-EClientScript)
