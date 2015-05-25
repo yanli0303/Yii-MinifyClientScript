@@ -61,10 +61,10 @@ class MinifyClientScript extends CClientScript
 
     protected function findMinifiedFile($fileName)
     {
-        $lastDotPosition = strrpos($fileName, '.');
-        $extension = false === $lastDotPosition ? '' : substr($fileName, $lastDotPosition);
+        $lastDotPosition          = strrpos($fileName, '.');
+        $extension                = false === $lastDotPosition ? '' : substr($fileName, $lastDotPosition);
         $fileNameWithoutExtension = false === $lastDotPosition ? $fileName : substr($fileName, 0, $lastDotPosition);
-        $fileNameSuffix = substr($fileNameWithoutExtension, -strlen($this->minFileSuffix));
+        $fileNameSuffix           = substr($fileNameWithoutExtension, -strlen($this->minFileSuffix));
 
         if ($this->minFileSuffix === $fileNameSuffix) {
             // already minified
@@ -154,25 +154,22 @@ class MinifyClientScript extends CClientScript
     public static function splitUrl($url)
     {
         $domain = '';
-        $query = '';
+        $query  = '';
 
         $questionIndex = strpos($url, '?');
         if (false !== $questionIndex) {
             $query = substr($url, $questionIndex);
-            $url = substr($url, 0, $questionIndex);
+            $url   = substr($url, 0, $questionIndex);
         }
 
         $protocolIndex = strpos($url, '//');
-        // unable to determine the domain without protocol, e.g. www.google.com/search?q=1234
-        if (false !== $protocolIndex) {
-            $pathIndex = strpos($url, '/', $protocolIndex + 2);
-            if (false !== $pathIndex) {
-                $domain = substr($url, 0, $pathIndex);
-                $url = substr($url, $pathIndex);
-            } else {
-                $domain = $url;
-                $url = '';
-            }
+        $pathIndex     = strpos($url, '/', false === $protocolIndex ? 0 : $protocolIndex + 2);
+        if (false !== $pathIndex) {
+            $domain = substr($url, 0, $pathIndex);
+            $url    = substr($url, $pathIndex);
+        } else {
+            $domain = $url;
+            $url    = '';
         }
 
         return array($domain, $url, $query);
@@ -209,20 +206,27 @@ class MinifyClientScript extends CClientScript
         }
 
         $urlParts = explode('/', $normalizedUrl);
+
+        // Removes /./ and // segments
+        $validParts = array();
+        foreach ($urlParts as $part) {
+            if (!empty($part) && $part !== '.') {
+                $validParts[] = $part;
+            }
+        }
+
         $index = 0;
-        while ($index < count($urlParts)) {
-            $part = $urlParts[$index];
-            if ($part === '.') {
-                array_splice($urlParts, $index, 1);
-            } elseif ($part === '..' && $index > 0 && $urlParts[$index - 1] !== '..' && $urlParts[$index - 1] !== '') {
-                array_splice($urlParts, $index - 1, 2);
+        while ($index < count($validParts)) {
+            $part = $validParts[$index];
+            if ($part === '..' && $index > 0 && $validParts[$index - 1] !== '..') {
+                array_splice($validParts, $index - 1, 2);
                 $index -= 1;
             } else {
                 $index += 1;
             }
         }
 
-        return $domain.implode('/', $urlParts).$query;
+        return $domain.'/'.implode('/', $validParts).$query;
     }
 
     /**
@@ -235,13 +239,13 @@ class MinifyClientScript extends CClientScript
      */
     public function cssUrlAbsolute($cssFileContent, $cssFileUrl)
     {
-        $baseUrl = Yii::app()->getBaseUrl();
+        $baseUrl      = Yii::app()->getBaseUrl();
         $newUrlPrefix = $this->canonicalizeUrl(dirname($cssFileUrl), $baseUrl);
         $newUrlPrefix = $baseUrl.'/'.(empty($newUrlPrefix) ? '' : $newUrlPrefix.'/');
 
         // see http://www.w3.org/TR/CSS2/syndata.html#uri
         return preg_replace_callback('#\burl\(([^)]+)\)#i', function ($matches) use (&$newUrlPrefix) {
-            $url = trim($matches[1], ' \'"');
+            $url      = trim($matches[1], ' \'"');
             $isAbsUrl = substr($url, 0, 1) === '/' || MinifyClientScript::isExternalUrl($url);
             if (!$isAbsUrl) {
                 $url = MinifyClientScript::realurl($newUrlPrefix.$url);
@@ -254,7 +258,7 @@ class MinifyClientScript extends CClientScript
     protected function filterLocals($items)
     {
         $externs = array();
-        $locals = array();
+        $locals  = array();
         foreach ($items as $url => $media) {
             if (self::isExternalUrl($url)) {
                 $externs[$url] = $media;
@@ -268,13 +272,13 @@ class MinifyClientScript extends CClientScript
 
     protected function trimBaseUrl($items, $isCss)
     {
-        $baseUrl = Yii::app()->getBaseUrl();
+        $baseUrl     = Yii::app()->getBaseUrl();
         $trimmedUrls = array();
         foreach ($items as $url => $media) {
             if (self::isExternalUrl($url)) {
                 $trimmedUrls[$url] = $media;
             } else {
-                $url = $this->canonicalizeUrl($url, $baseUrl);
+                $url               = $this->canonicalizeUrl($url, $baseUrl);
                 $trimmedUrls[$url] = $isCss ? $media : $url;
             }
         }
@@ -285,20 +289,20 @@ class MinifyClientScript extends CClientScript
     protected function generateBigMinFilePath($files, $extension)
     {
         $maxFileModifiedTime = $this->maxFileModifiedTime($files);
-        $id = $this->hashFileNames($files).'_'.$maxFileModifiedTime;
+        $id                  = $this->hashFileNames($files).'_'.$maxFileModifiedTime;
 
         return $this->getWorkingDir().DIRECTORY_SEPARATOR.$id.$this->minFileSuffix.$extension;
     }
 
     protected function getFiles($items)
     {
-        $baseUrl = Yii::app()->getBaseUrl();
+        $baseUrl  = Yii::app()->getBaseUrl();
         $basePath = Yii::getPathOfAlias('webroot');
 
         $files = array();
         foreach ($items as $url) {
             $relativePath = $this->canonicalizeUrl($url, $baseUrl);
-            $realpath = realpath($basePath.DIRECTORY_SEPARATOR.$relativePath);
+            $realpath     = realpath($basePath.DIRECTORY_SEPARATOR.$relativePath);
             if (false === $realpath) {
                 throw new Exception('File not found: '.$url);
             }
@@ -353,12 +357,12 @@ class MinifyClientScript extends CClientScript
             return $groupItems;
         }
 
-        $files = $this->getFiles($locals);
-        $bigFile = $this->generateBigMinFilePath($files, $isCss ? '.css' : '.js');
+        $files      = $this->getFiles($locals);
+        $bigFile    = $this->generateBigMinFilePath($files, $isCss ? '.css' : '.js');
         $bigFileUrl = file_exists($bigFile) ? Yii::app()->getAssetManager()->getPublishedUrl($bigFile, true) : null;
 
         if (!$bigFileUrl) {
-            $minFiles = $this->findMinifiedFiles($files);
+            $minFiles   = $this->findMinifiedFiles($files);
             $tmpBigFile = tempnam($this->getWorkingDir(), 'min');
             if ($isCss && $this->rewriteCssUrl) {
                 $me = $this;
@@ -375,7 +379,7 @@ class MinifyClientScript extends CClientScript
         }
 
         if ($this->trimBaseUrl) {
-            $baseUrl = Yii::app()->getBaseUrl();
+            $baseUrl    = Yii::app()->getBaseUrl();
             $bigFileUrl = $this->canonicalizeUrl($bigFileUrl, $baseUrl);
         }
 
@@ -437,8 +441,8 @@ class MinifyClientScript extends CClientScript
         $this->processScripts();
         if (YII_DEBUG) {
             $minifyEndTime = microtime(true);
-            $execution = ($minifyEndTime - $minifyStartTime) * 1000;
-            $pageUrl = Yii::app()->getRequest()->getUrl();
+            $execution     = ($minifyEndTime - $minifyStartTime) * 1000;
+            $pageUrl       = Yii::app()->getRequest()->getUrl();
             Yii::log("Minify took {$execution} ms on {$pageUrl}", CLogger::LEVEL_PROFILE, 'ext.minify.'.__CLASS__.'.'.__FUNCTION__.'.line'.__LINE__);
         }
         // Ends my code
@@ -449,4 +453,5 @@ class MinifyClientScript extends CClientScript
             $this->renderBodyEnd($output);
         }
     }
+
 }

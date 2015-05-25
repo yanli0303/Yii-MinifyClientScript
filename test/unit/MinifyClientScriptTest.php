@@ -122,24 +122,24 @@ class MinifyClientScriptTest extends CTestCase
         $webroot = self::getWebRoot();
 
         $cssExterns = array(
-            'http://www.google.com/path/to/style.css' => 'screen',
+            'http://www.google.com/path/to/style.css'  => 'screen',
             'https://www.google.com/path/to/style.css' => 'print',
-            '//www.google.com/path/to/style.css' => 'mobile',
+            '//www.google.com/path/to/style.css'       => 'mobile',
         );
 
         $cssLocals = array(
-            'path/to/style.css' => 'local', // one file, two urls, the file will be included in the bigMinFile twice
-            self::BASE_URL.'/path/to/style.css' => 'local2', // one file, two urls
-            self::BASE_URL.'/style.css' => 'local',
-            self::BASE_URL.'/unit/test/../index.css' => 'local',
+            'path/to/style.css'                                => 'local', // one file, two urls, the file will be included in the bigMinFile twice
+            self::BASE_URL.'/path/to/style.css'                => 'local2', // one file, two urls
+            self::BASE_URL.'/style.css'                        => 'local',
+            self::BASE_URL.'/unit/test/../index.css'           => 'local',
             self::BASE_URL.'/./test/../unit/../main/style.css' => 'local',
         );
 
         $cssLocalFiles = array(
-            'path/to/style.css' => implode(DIRECTORY_SEPARATOR, array($webroot, 'path', 'to', 'style.css')),
-            self::BASE_URL.'/path/to/style.css' => implode(DIRECTORY_SEPARATOR, array($webroot, 'path', 'to', 'style.css')),
-            self::BASE_URL.'/style.css' => $webroot.DIRECTORY_SEPARATOR.'style.css',
-            self::BASE_URL.'/unit/test/../index.css' => implode(DIRECTORY_SEPARATOR, array($webroot, 'unit', 'index.css')),
+            'path/to/style.css'                                => implode(DIRECTORY_SEPARATOR, array($webroot, 'path', 'to', 'style.css')),
+            self::BASE_URL.'/path/to/style.css'                => implode(DIRECTORY_SEPARATOR, array($webroot, 'path', 'to', 'style.css')),
+            self::BASE_URL.'/style.css'                        => $webroot.DIRECTORY_SEPARATOR.'style.css',
+            self::BASE_URL.'/unit/test/../index.css'           => implode(DIRECTORY_SEPARATOR, array($webroot, 'unit', 'index.css')),
             self::BASE_URL.'/./test/../unit/../main/style.css' => implode(DIRECTORY_SEPARATOR, array($webroot, 'main', 'style.css')),
         );
 
@@ -163,7 +163,7 @@ class MinifyClientScriptTest extends CTestCase
             }
 
             $fakepath = '';
-            $j = 0;
+            $j        = 0;
             while ($j <= $index) {
                 $fakepath .= "path{$j}/./path{$j}_not_useful/../";
 
@@ -175,38 +175,38 @@ class MinifyClientScriptTest extends CTestCase
         }
 
         $cssLocalsTrimmedBaseUrl = array(
-            'path/to/style.css' => 'local2',
-            'style.css' => 'local',
-            'unit/test/../index.css' => 'local',
+            'path/to/style.css'                => 'local2',
+            'style.css'                        => 'local',
+            'unit/test/../index.css'           => 'local',
             './test/../unit/../main/style.css' => 'local',
         );
 
         $jsExterns = array(
-            'http://www.google.com/path/to/script.js' => 'http://www.google.com/path/to/script.js',
+            'http://www.google.com/path/to/script.js'  => 'http://www.google.com/path/to/script.js',
             'https://www.google.com/path/to/script.js' => 'https://www.google.com/path/to/script.js',
-            '//www.google.com/path/to/script.js' => '//www.google.com/path/to/script.js',
+            '//www.google.com/path/to/script.js'       => '//www.google.com/path/to/script.js',
         );
 
         $jsLocals = array(
-            self::BASE_URL.'/path/to/script.js' => self::BASE_URL.'/path/to/script.js', // one file, two urls, the file will be included in the bigMinFile twice.
-            'path/to/script.js' => 'path/to/script.js', // one file, two urls
-            self::BASE_URL.'/script.js' => self::BASE_URL.'/script.js',
-            self::BASE_URL.'/unit/test/../script.js' => self::BASE_URL.'/unit/test/../script.js',
+            self::BASE_URL.'/path/to/script.js'                => self::BASE_URL.'/path/to/script.js', // one file, two urls, the file will be included in the bigMinFile twice.
+            'path/to/script.js'                                => 'path/to/script.js', // one file, two urls
+            self::BASE_URL.'/script.js'                        => self::BASE_URL.'/script.js',
+            self::BASE_URL.'/unit/test/../script.js'           => self::BASE_URL.'/unit/test/../script.js',
             self::BASE_URL.'/unit/./../test/../main/script.js' => self::BASE_URL.'/unit/./../test/../main/script.js',
         );
 
         $jsLocalsTrimmedBaseUrl = array(
-            'path/to/script.js' => 'path/to/script.js',
-            'script.js' => 'script.js',
-            'unit/test/../script.js' => 'unit/test/../script.js',
+            'path/to/script.js'                => 'path/to/script.js',
+            'script.js'                        => 'script.js',
+            'unit/test/../script.js'           => 'unit/test/../script.js',
             'unit/./../test/../main/script.js' => 'unit/./../test/../main/script.js',
         );
 
         $jsLocalFiles = array(
-            self::BASE_URL.'/path/to/script.js' => implode(DIRECTORY_SEPARATOR, array($webroot, 'path', 'to', 'script.js')),
-            'path/to/script.js' => implode(DIRECTORY_SEPARATOR, array($webroot, 'path', 'to', 'script.js')),
-            self::BASE_URL.'/script.js' => $webroot.DIRECTORY_SEPARATOR.'script.js',
-            self::BASE_URL.'/unit/test/../script.js' => implode(DIRECTORY_SEPARATOR, array($webroot, 'unit', 'script.js')),
+            self::BASE_URL.'/path/to/script.js'                => implode(DIRECTORY_SEPARATOR, array($webroot, 'path', 'to', 'script.js')),
+            'path/to/script.js'                                => implode(DIRECTORY_SEPARATOR, array($webroot, 'path', 'to', 'script.js')),
+            self::BASE_URL.'/script.js'                        => $webroot.DIRECTORY_SEPARATOR.'script.js',
+            self::BASE_URL.'/unit/test/../script.js'           => implode(DIRECTORY_SEPARATOR, array($webroot, 'unit', 'script.js')),
             self::BASE_URL.'/unit/./../test/../main/script.js' => implode(DIRECTORY_SEPARATOR, array($webroot, 'main', 'script.js')),
         );
 
@@ -235,8 +235,8 @@ class MinifyClientScriptTest extends CTestCase
 
     private function findPublishedMinFile()
     {
-        $assets = self::getAssetsDir();
-        $list = CFileHelper::findFiles($assets);
+        $assets   = self::getAssetsDir();
+        $list     = CFileHelper::findFiles($assets);
         $filename = $list[0];
         if (strlen($filename) < 3) {
             $this->fail('Unable to find min file in: '.$assets);
@@ -322,16 +322,16 @@ class MinifyClientScriptTest extends CTestCase
             $this->fail('Unable to remove minify working directory before test.');
         }
 
-        $cs = new MinifyClientScript();
+        $cs       = new MinifyClientScript();
         $expected = $wd;
-        $actual = TestHelper::invokeProtectedMethod($cs, 'getWorkingDir');
+        $actual   = TestHelper::invokeProtectedMethod($cs, 'getWorkingDir');
         $this->assertEquals($expected, $actual);
         $this->assertTrue(is_dir($wd));
     }
 
     public function findMinifiedFileDataProvider()
     {
-        $tmp = sys_get_temp_dir().DIRECTORY_SEPARATOR;
+        $tmp      = sys_get_temp_dir().DIRECTORY_SEPARATOR;
         $expected = $tmp.'yanli.min.js';
         $this->removeFiles(array($expected));
 
@@ -351,7 +351,7 @@ class MinifyClientScriptTest extends CTestCase
     {
         $this->createFiles(array($createFile));
 
-        $cs = new MinifyClientScript();
+        $cs     = new MinifyClientScript();
         $actual = TestHelper::invokeProtectedMethod($cs, 'findMinifiedFile', array($filename));
         $this->assertEquals($expected, $actual);
 
@@ -360,8 +360,8 @@ class MinifyClientScriptTest extends CTestCase
 
     public function findMinifiedFilesDataProvider()
     {
-        $tmp = sys_get_temp_dir().DIRECTORY_SEPARATOR;
-        $file = $tmp.'yanli.js';
+        $tmp     = sys_get_temp_dir().DIRECTORY_SEPARATOR;
+        $file    = $tmp.'yanli.js';
         $minFile = $tmp.'yanli.min.js';
         $this->removeFiles(array($minFile));
 
@@ -381,7 +381,7 @@ class MinifyClientScriptTest extends CTestCase
     {
         $this->createFiles($createFiles);
 
-        $cs = new MinifyClientScript();
+        $cs              = new MinifyClientScript();
         $cs->failOnError = $failOnError;
 
         if ($expected instanceof Exception) {
@@ -418,8 +418,8 @@ class MinifyClientScriptTest extends CTestCase
             tempnam(self::getWebRoot(), 'max'),
         );
 
-        $cs = new MinifyClientScript();
-        $actual = TestHelper::invokeProtectedMethod($cs, 'maxFileModifiedTime', array($files));
+        $cs       = new MinifyClientScript();
+        $actual   = TestHelper::invokeProtectedMethod($cs, 'maxFileModifiedTime', array($files));
         $expected = time();
         $this->assertLessThan(1, $expected - $actual);
     }
@@ -433,12 +433,12 @@ class MinifyClientScriptTest extends CTestCase
             tempnam(self::getWebRoot(), 'has'),
         );
 
-        $cs = new MinifyClientScript();
+        $cs     = new MinifyClientScript();
         $actual = TestHelper::invokeProtectedMethod($cs, 'hashFileNames', array($files));
         $this->assertNotEmpty($actual);
         $this->assertEquals(32, strlen($actual));
 
-        $files2 = array_merge(array('1'), $files);
+        $files2  = array_merge(array('1'), $files);
         $actual2 = TestHelper::invokeProtectedMethod($cs, 'hashFileNames', array($files2));
         $this->assertNotEmpty($actual2);
         $this->assertEquals(32, strlen($actual2));
@@ -449,7 +449,7 @@ class MinifyClientScriptTest extends CTestCase
     public function canonicalizeUrlDataProvider()
     {
         $data = array();
-        $url = '/path/to/file.php';
+        $url  = '/path/to/file.php';
 
         $data[] = array($url, '', 'path/to/file.php');
         $data[] = array($url, '/pathNotFound', 'path/to/file.php');
@@ -469,7 +469,7 @@ class MinifyClientScriptTest extends CTestCase
      */
     public function testCanonicalizeUrl($url, $prefix, $expected)
     {
-        $cs = new MinifyClientScript();
+        $cs     = new MinifyClientScript();
         $actual = TestHelper::invokeProtectedMethod($cs, 'canonicalizeUrl', array($url, $prefix));
         $this->assertEquals($expected, $actual);
     }
@@ -480,7 +480,7 @@ class MinifyClientScriptTest extends CTestCase
 
         $data[] = array('', array('', '', ''));
 
-        $data[] = array('www.google.com/search?q=1234', array('', 'www.google.com/search', '?q=1234'));
+        $data[] = array('www.google.com/search?q=1234', array('www.google.com', '/search', '?q=1234'));
 
         $data[] = array('http://www.google.com', array('http://www.google.com', '', ''));
         $data[] = array('http://www.google.com/', array('http://www.google.com', '/', ''));
@@ -501,7 +501,7 @@ class MinifyClientScriptTest extends CTestCase
         $data[] = array('//www.google.com/search?q=1234', array('//www.google.com', '/search', '?q=1234'));
 
         $data[] = array('/path/search?q=1234', array('', '/path/search', '?q=1234'));
-        $data[] = array('path/search?q=1234', array('', 'path/search', '?q=1234'));
+        $data[] = array('path/search?q=1234', array('path', '/search', '?q=1234'));
 
         return $data;
     }
@@ -582,7 +582,7 @@ class MinifyClientScriptTest extends CTestCase
         $data[] = array(self::BASE_URL.'/../image/path0/./path0/../path1/./path1/../img.png', '/image/path0/path1/img.png');
         $data[] = array(self::BASE_URL.'/../image/path0/./path0/../path1/./path1/../path2/./path2/../path3/./path3/../img.png', '/image/path0/path1/path2/path3/img.png');
         $data[] = array(self::BASE_URL.'/../../image/path0/./path0/../path1/./path1/../path2/./path2/../path3/./path3/../img.png', '/../image/path0/path1/path2/path3/img.png');
-        $data[] = array('///////////img.png', '///////////img.png');
+        $data[] = array('///////////img.png', '///img.png'); // the first two slashse indicates the procotol "//"
 
         return $data;
     }
@@ -602,8 +602,8 @@ class MinifyClientScriptTest extends CTestCase
 
     public function testCssUrlAbsolute()
     {
-        $baseUrl = self::BASE_URL;
-        $url = $baseUrl.'///////path1/./path_not_useful/../path2/path3/path4/style.css';
+        $baseUrl    = self::BASE_URL;
+        $url        = $baseUrl.'///////path1/./path_not_useful/../path2/path3/path4/style.css';
         $cssContent = <<<CSS
 .class1 { background-image: url(./images/img.png); }
 .class2 { background-image: url('.././images/img.png'); } /* remove single quotes */
@@ -630,7 +630,7 @@ CSS;
 .class10 { background-image: url(/../images/../img.png); } /* app relative url */
 CSS;
 
-        $cs = new MinifyClientScript();
+        $cs     = new MinifyClientScript();
         $actual = TestHelper::invokeProtectedMethod($cs, 'cssUrlAbsolute', array($cssContent, $url));
         $this->assertEquals($expected, $actual);
     }
@@ -638,25 +638,25 @@ CSS;
     public function testFilterLocals()
     {
         $items = array(
-            'http://www.google.com/path/to/style.css' => 'screen',
+            'http://www.google.com/path/to/style.css'  => 'screen',
             'https://www.google.com/path/to/style.css' => 'print',
-            '//www.google.com/path/to/style.css' => 'mobile',
-            '/path/to/style.css' => 'local',
-            'path/to/style.css' => 'local',
-            'style.css' => 'local',
-            '../style.css' => 'local',
-            '../../style.css' => 'local',
-            'http://www.google.com/path/to/script.js' => 'http://www.google.com/path/to/script.js',
+            '//www.google.com/path/to/style.css'       => 'mobile',
+            '/path/to/style.css'                       => 'local',
+            'path/to/style.css'                        => 'local',
+            'style.css'                                => 'local',
+            '../style.css'                             => 'local',
+            '../../style.css'                          => 'local',
+            'http://www.google.com/path/to/script.js'  => 'http://www.google.com/path/to/script.js',
             'https://www.google.com/path/to/script.js' => 'https://www.google.com/path/to/script.js',
-            '//www.google.com/path/to/script.js' => '//www.google.com/path/to/script.js',
-            '/path/to/script.js' => '/path/to/script.js',
-            'path/to/script.js' => 'path/to/script.js',
-            'script.js' => 'script.js',
-            '../script.js' => '../script.js',
-            '../../script.js' => '../../script.js',
+            '//www.google.com/path/to/script.js'       => '//www.google.com/path/to/script.js',
+            '/path/to/script.js'                       => '/path/to/script.js',
+            'path/to/script.js'                        => 'path/to/script.js',
+            'script.js'                                => 'script.js',
+            '../script.js'                             => '../script.js',
+            '../../script.js'                          => '../../script.js',
         );
 
-        $expectedLocals = array(
+        $expectedLocals  = array(
             '/path/to/style.css',
             'path/to/style.css',
             'style.css',
@@ -669,12 +669,12 @@ CSS;
             '../../script.js',
         );
         $expectedExterns = array(
-            'http://www.google.com/path/to/style.css' => 'screen',
+            'http://www.google.com/path/to/style.css'  => 'screen',
             'https://www.google.com/path/to/style.css' => 'print',
-            '//www.google.com/path/to/style.css' => 'mobile',
-            'http://www.google.com/path/to/script.js' => 'http://www.google.com/path/to/script.js',
+            '//www.google.com/path/to/style.css'       => 'mobile',
+            'http://www.google.com/path/to/script.js'  => 'http://www.google.com/path/to/script.js',
             'https://www.google.com/path/to/script.js' => 'https://www.google.com/path/to/script.js',
-            '//www.google.com/path/to/script.js' => '//www.google.com/path/to/script.js',
+            '//www.google.com/path/to/script.js'       => '//www.google.com/path/to/script.js',
         );
 
         $cs = new MinifyClientScript();
@@ -686,45 +686,45 @@ CSS;
     public function trimBaseUrlDataProvider()
     {
         $cssItems = array(
-            'http://www.google.com/path/to/style.css' => 'screen',
+            'http://www.google.com/path/to/style.css'  => 'screen',
             'https://www.google.com/path/to/style.css' => 'print',
-            '//www.google.com/path/to/style.css' => 'mobile',
-            'path/to/style.css' => 'local', // this will be overwritten by following one
-            self::BASE_URL.'/path/to/style.css' => 'local2',
-            self::BASE_URL.'/style.css' => 'local',
-            self::BASE_URL.'/../style.css' => 'local',
-            self::BASE_URL.'/../../style.css' => 'local',
+            '//www.google.com/path/to/style.css'       => 'mobile',
+            'path/to/style.css'                        => 'local', // this will be overwritten by following one
+            self::BASE_URL.'/path/to/style.css'        => 'local2',
+            self::BASE_URL.'/style.css'                => 'local',
+            self::BASE_URL.'/../style.css'             => 'local',
+            self::BASE_URL.'/../../style.css'          => 'local',
         );
 
         $jsItems = array(
-            'http://www.google.com/path/to/script.js' => 'http://www.google.com/path/to/script.js',
+            'http://www.google.com/path/to/script.js'  => 'http://www.google.com/path/to/script.js',
             'https://www.google.com/path/to/script.js' => 'https://www.google.com/path/to/script.js',
-            '//www.google.com/path/to/script.js' => '//www.google.com/path/to/script.js',
-            self::BASE_URL.'/path/to/script.js' => self::BASE_URL.'/path/to/script.js', // this will be overwritten by following one
-            'path/to/script.js' => 'path/to/script.js',
-            self::BASE_URL.'/script.js' => self::BASE_URL.'/script.js',
-            self::BASE_URL.'/../script.js' => self::BASE_URL.'../script.js',
-            self::BASE_URL.'/../../script.js' => self::BASE_URL.'../../script.js',
+            '//www.google.com/path/to/script.js'       => '//www.google.com/path/to/script.js',
+            self::BASE_URL.'/path/to/script.js'        => self::BASE_URL.'/path/to/script.js', // this will be overwritten by following one
+            'path/to/script.js'                        => 'path/to/script.js',
+            self::BASE_URL.'/script.js'                => self::BASE_URL.'/script.js',
+            self::BASE_URL.'/../script.js'             => self::BASE_URL.'../script.js',
+            self::BASE_URL.'/../../script.js'          => self::BASE_URL.'../../script.js',
         );
 
         $expectedCssItems = array(
-            'http://www.google.com/path/to/style.css' => 'screen',
+            'http://www.google.com/path/to/style.css'  => 'screen',
             'https://www.google.com/path/to/style.css' => 'print',
-            '//www.google.com/path/to/style.css' => 'mobile',
-            'path/to/style.css' => 'local2',
-            'style.css' => 'local',
-            '../style.css' => 'local',
-            '../../style.css' => 'local',
+            '//www.google.com/path/to/style.css'       => 'mobile',
+            'path/to/style.css'                        => 'local2',
+            'style.css'                                => 'local',
+            '../style.css'                             => 'local',
+            '../../style.css'                          => 'local',
         );
 
         $expectedJsItems = array(
-            'http://www.google.com/path/to/script.js' => 'http://www.google.com/path/to/script.js',
+            'http://www.google.com/path/to/script.js'  => 'http://www.google.com/path/to/script.js',
             'https://www.google.com/path/to/script.js' => 'https://www.google.com/path/to/script.js',
-            '//www.google.com/path/to/script.js' => '//www.google.com/path/to/script.js',
-            'path/to/script.js' => 'path/to/script.js',
-            'script.js' => 'script.js',
-            '../script.js' => '../script.js',
-            '../../script.js' => '../../script.js',
+            '//www.google.com/path/to/script.js'       => '//www.google.com/path/to/script.js',
+            'path/to/script.js'                        => 'path/to/script.js',
+            'script.js'                                => 'script.js',
+            '../script.js'                             => '../script.js',
+            '../../script.js'                          => '../../script.js',
         );
 
         $data = array();
@@ -740,14 +740,14 @@ CSS;
      */
     public function testTrimBaseUrl($items, $isCss, $expected)
     {
-        $cs = new MinifyClientScript();
+        $cs     = new MinifyClientScript();
         $actual = TestHelper::invokeProtectedMethod($cs, 'trimBaseUrl', array($items, $isCss));
         $this->assertEquals($expected, $actual);
     }
 
     public function testGenerateBigMinFilePath()
     {
-        $wd = Yii::app()->getRuntimePath().DIRECTORY_SEPARATOR.'minify'.DIRECTORY_SEPARATOR;
+        $wd        = Yii::app()->getRuntimePath().DIRECTORY_SEPARATOR.'minify'.DIRECTORY_SEPARATOR;
         $extension = '.txt';
 
         $files = array(
@@ -757,8 +757,8 @@ CSS;
             tempnam(self::getWebRoot(), 'has'),
         );
 
-        $unixTime = '_'.time();
-        $cs = new MinifyClientScript();
+        $unixTime          = '_'.time();
+        $cs                = new MinifyClientScript();
         $cs->minFileSuffix = '.mininfied';
 
         $actual = TestHelper::invokeProtectedMethod($cs, 'generateBigMinFilePath', array($files, $extension));
@@ -787,7 +787,7 @@ CSS;
     public function testGetFiles()
     {
         $currentDirName = basename(__DIR__);
-        $webroot = Yii::getPathOfAlias('webroot');
+        $webroot        = Yii::getPathOfAlias('webroot');
         $webrootDirName = basename($webroot);
 
         CFileHelper::copyDirectory(__DIR__, $webroot.DIRECTORY_SEPARATOR.$currentDirName);
@@ -799,11 +799,11 @@ CSS;
         );
 
         $expected = array(
-            $currentDirName.'/'.basename(__FILE__) => $webroot.DIRECTORY_SEPARATOR.$currentDirName.DIRECTORY_SEPARATOR.basename(__FILE__),
+            $currentDirName.'/'.basename(__FILE__)                 => $webroot.DIRECTORY_SEPARATOR.$currentDirName.DIRECTORY_SEPARATOR.basename(__FILE__),
             '../'.$webrootDirName.'/'.$currentDirName.'/style.css' => $webroot.DIRECTORY_SEPARATOR.$currentDirName.DIRECTORY_SEPARATOR.'style.css',
         );
 
-        $cs = new MinifyClientScript();
+        $cs     = new MinifyClientScript();
         $actual = TestHelper::invokeProtectedMethod($cs, 'getFiles', array($files));
         $this->assertEquals($expected, $actual);
     }
@@ -814,9 +814,9 @@ CSS;
      */
     public function testConcatInputFileNotExist()
     {
-        $files = array('z:/not_exist.file');
+        $files  = array('z:/not_exist.file');
         $saveAs = tempnam(Yii::getPathOfAlias('webroot'), 'cat');
-        $cs = new MinifyClientScript();
+        $cs     = new MinifyClientScript();
         TestHelper::invokeProtectedMethod($cs, 'concat', array($files, $saveAs));
     }
 
@@ -828,8 +828,8 @@ CSS;
     {
         $files = array('current' => __FILE__);
 
-        $saveAs = tempnam(Yii::getPathOfAlias('webroot'), 'loc');
-        $writer = fopen($saveAs, 'w+');
+        $saveAs                     = tempnam(Yii::getPathOfAlias('webroot'), 'loc');
+        $writer                     = fopen($saveAs, 'w+');
         $this->fileHandlesToClose[] = $writer;
 
         if (!flock($writer, LOCK_EX | LOCK_NB)) {
@@ -846,17 +846,17 @@ CSS;
     {
         $files = array(
             'current' => __FILE__,
-            'style' => self::getWebRoot().DIRECTORY_SEPARATOR.'style.css',
-            'script' => self::getWebRoot().DIRECTORY_SEPARATOR.'script.js',
+            'style'   => self::getWebRoot().DIRECTORY_SEPARATOR.'style.css',
+            'script'  => self::getWebRoot().DIRECTORY_SEPARATOR.'script.js',
         );
 
         $saveAs = tempnam(Yii::getPathOfAlias('webroot'), 'cat');
-        $cs = new MinifyClientScript();
+        $cs     = new MinifyClientScript();
         TestHelper::invokeProtectedMethod($cs, 'concat', array($files, $saveAs, function ($content, $key) {
-        return $key;
-    }));
+                return $key;
+            }));
 
-        $actual = file_get_contents($saveAs);
+        $actual   = file_get_contents($saveAs);
         $expected = 'current'.PHP_EOL.'style'.PHP_EOL.'script'.PHP_EOL;
         $this->assertEquals($expected, $actual);
     }
@@ -868,7 +868,7 @@ CSS;
         list($cssExterns, $cssLocals, $cssLocalsTrimmedBaseUrl, $jsExterns, $jsLocals, $jsLocalsTrimmedBaseUrl) = $this->prepareTestScripts();
 
         $cssItems = array_merge($cssLocals, $cssExterns);
-        $jsItems = array_merge($jsLocals, $jsExterns);
+        $jsItems  = array_merge($jsLocals, $jsExterns);
 
         // not minify, not trimBaseUrl
         $data[] = array(false, false, false, $cssItems, true, $cssItems);
@@ -889,7 +889,7 @@ CSS;
                     '.class1{background-image:url("../image/path0/./path0_not_useful/../path1/./path1_not_useful/../path2/./path2_not_useful/../path3/./path3_not_useful/../img.png")}',
                     '.class1{background-image:url("../image/path0/./path0_not_useful/../path1/./path1_not_useful/../path2/./path2_not_useful/../path3/./path3_not_useful/../path4/./path4_not_useful/../img.png")}',
                 )).PHP_EOL;
-        $cssBigMinFileRewriteContent = implode(PHP_EOL, array(
+        $cssBigMinFileRewriteContent   = implode(PHP_EOL, array(
                     '.class1{background-image:url('.self::BASE_URL.'/path/image/path0/path1/img.png)}',
                     '.class1{background-image:url('.self::BASE_URL.'/path/image/path0/path1/img.png)}',
                     '.class1{background-image:url(/image/path0/path1/path2/img.png)}',
@@ -923,9 +923,9 @@ CSS;
         self::resetDir(self::getMinifyDir());
         TestHelper::setProtectedProperty(Yii::app()->getAssetManager(), '_published', array());
 
-        $cs = new MinifyClientScript();
-        $cs->minify = $minify;
-        $cs->trimBaseUrl = $trimBaseUrl;
+        $cs                = new MinifyClientScript();
+        $cs->minify        = $minify;
+        $cs->trimBaseUrl   = $trimBaseUrl;
         $cs->rewriteCssUrl = $rewriteCssUrl;
 
         $actual = TestHelper::invokeProtectedMethod($cs, 'processScriptGroup', array($groupItems, $isCss));
@@ -948,10 +948,10 @@ CSS;
     {
         $data = array();
 
-        $cssLocals = array(self::BASE_URL.'/style.css' => 'screen');
+        $cssLocals         = array(self::BASE_URL.'/style.css' => 'screen');
         $cssResolvedLocals = array('style.css' => 'screen');
 
-        $jsLocals = array(
+        $jsLocals         = array(
             2 => array(self::BASE_URL.'/script.js' => self::BASE_URL.'/script.js'),
         );
         $jsResolvedLocals = array(
@@ -975,8 +975,8 @@ CSS;
      */
     public function testProcessScripts($minify, $trimBaseUrl, $cssFiles, $scriptFiles, $expectedCssFiles, $expectedScriptFiles)
     {
-        $cs = new MinifyClientScript();
-        $cs->minify = $minify;
+        $cs              = new MinifyClientScript();
+        $cs->minify      = $minify;
         $cs->trimBaseUrl = $trimBaseUrl;
         TestHelper::setProtectedProperty($cs, 'cssFiles', $cssFiles);
         TestHelper::setProtectedProperty($cs, 'scriptFiles', $scriptFiles);
@@ -992,8 +992,8 @@ CSS;
 
     public function testRender()
     {
-        $cs = new MinifyClientScript();
-        $cs->minify = false;
+        $cs              = new MinifyClientScript();
+        $cs->minify      = false;
         $cs->trimBaseUrl = true;
         TestHelper::setProtectedProperty($cs, 'hasScripts', true);
         TestHelper::setProtectedProperty($cs, 'cssFiles', array(self::BASE_URL.'/style.css' => 'screen'));
@@ -1015,4 +1015,5 @@ HTML;
         $this->assertContains('<link rel="stylesheet" type="text/css" href="style.css" media="screen" />', $actual);
         $this->assertContains('<script type="text/javascript" src="script.js"></script>', $actual);
     }
+
 }
