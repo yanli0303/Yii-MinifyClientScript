@@ -242,8 +242,8 @@ class MinifyClientScript extends CClientScript
         // see http://www.w3.org/TR/CSS2/syndata.html#uri
         return preg_replace_callback('#\burl\(([^)]+)\)#i', function ($matches) use (&$newUrlPrefix) {
             $url      = trim($matches[1], ' \'"');
-            $isAbsUrl = substr($url, 0, 1) === '/' || MinifyClientScript::isExternalUrl($url);
-            if (!$isAbsUrl) {
+            $ignore = substr($url, 0, 1) === '/' || substr($url, 0, 5) === 'data:' || MinifyClientScript::isExternalUrl($url);
+            if (!$ignore) {
                 $url = MinifyClientScript::realurl($newUrlPrefix.$url);
             }
 
